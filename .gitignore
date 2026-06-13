@@ -1,0 +1,21 @@
+# deps / build
+node_modules/
+dist/
+.vite/
+.turbo/
+*.log
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# os
+.DS_Store
+
+# 原始素材（1.1G PDF/图片/音频）——太大，不入 git；如需版本化请用 Git LFS
+Data/
+
+# 编译产物（后端启动时自动重新生成）
+backend/graph.json
+backend/graph.cache.json
