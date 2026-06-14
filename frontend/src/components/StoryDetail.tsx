@@ -2,10 +2,13 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { ReactFlow, Background, Handle, Position, MarkerType, type Node, type Edge } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import ELK from "elkjs/lib/elk.bundled.js";
-import { ChevronLeft, Undo2, Loader2, Zap, Search, Network, RotateCcw, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Undo2, Loader2, Zap, Search, Network, RotateCcw, AlertTriangle, Pencil, Trash2, Sparkles } from "lucide-react";
 import type { StoryGraph, StoryEvent } from "@liumang/shared";
 import { useUI, type EventMode } from "../store";
+import { postPreview } from "../lib/api";
 import StoryMinimap from "./StoryMinimap";
+import EditHUD from "./EditHUD";
+import InsertPanel from "./InsertPanel";
 
 const NODE_W = 236;
 const NODE_H = 138;
@@ -21,13 +24,15 @@ const PCS = new Set(["程聿怀", "程走柳", "缪宏谟", "黛利拉", "以撒
 const elk = new ELK();
 
 type Side = "origin" | "up" | "down";
-interface NodeData { ev: StoryEvent; role?: "spine" | "ctx"; side?: Side; layer?: number; sideMax?: number; mode?: EventMode; origin?: boolean }
+interface NodeData { ev: StoryEvent; role?: "spine" | "ctx"; side?: Side; layer?: number; sideMax?: number; mode?: EventMode; origin?: boolean; affected?: boolean }
 
-/** 富卡片节点：锚点(焦点)/选中/三模式激活态 */
+/** 富卡片节点：锚点(焦点)/选中/三模式激活态/改本草稿态 */
 function StoryCard({ data }: { data: NodeData }) {
-  const { selEvent, hoverEvent, propLevel, flagged } = useUI();
-  const { ev, role, side, layer = 0, sideMax = 0, mode, origin } = data;
+  const { selEvent, hoverEvent, propLevel, flagged, editing, draft } = useUI();
+  const { ev, role, side, layer = 0, sideMax = 0, mode, origin, affected } = data;
   const flag = flagged[ev.id];
+  const removed = editing && draft.removeEventIds.includes(ev.id);
+  const isNew = editing && draft.addEvents.some((e) => e.id === ev.id);
   const color = TYPE_COLOR[ev.type] ?? "#60a5fa";
   const sel = selEvent === ev.id;
   const hot = hoverEvent === ev.id;
@@ -66,14 +71,21 @@ function StoryCard({ data }: { data: NodeData }) {
   }
   // 选中(非锚点)的次级高亮
   const selRing = sel && !origin;
+  // 改本草稿态覆盖
+  if (removed) { border = "border-rose-400/60"; opacity = 0.4; }
+  else if (isNew) { border = "border-emerald-400"; glow = "0 0 0 2px #34d399, 0 0 18px #34d39988"; }
+  else if (affected && !origin) { glow = "0 0 0 1px #f59e0baa, 0 0 14px #f59e0b66"; }
 
   return (
     <div className={`relative rounded-xl border bg-ink-850 ${selRing ? "ring-2 ring-sky-400/60" : ""} ${border} ${wavePulse ? "blast-wave" : ""}`} style={{ width: NODE_W, height: NODE_H, opacity, boxShadow: glow }}>
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
       <span className="absolute left-0 top-0 h-full w-1.5 rounded-l-xl" style={{ background: color }} />
+      {removed && <span className="absolute inset-0 z-10 grid place-items-center rounded-xl bg-ink-950/30"><span className="rounded bg-rose-500 px-2 py-0.5 text-[9px] font-bold text-white shadow">✗ 删除</span></span>}
+      {isNew && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-emerald-400 px-1.5 py-0.5 text-[8px] font-bold text-ink-950 shadow">＋新</span>}
+      {affected && !origin && !removed && !isNew && <span className="absolute -right-1.5 top-3 rounded bg-amber-400/90 px-1 text-[8px] font-bold text-ink-950 shadow">波及</span>}
       {badge && <span className="absolute -right-1.5 -top-1.5 rounded-full px-1.5 py-0.5 text-[8px] font-bold text-white shadow" style={{ background: badge.bg }}>{badge.text}</span>}
-      {selRing && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-sky-400 px-1.5 py-0.5 text-[8px] font-bold text-white shadow">选中</span>}
+      {selRing && !removed && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-sky-400 px-1.5 py-0.5 text-[8px] font-bold text-white shadow">选中</span>}
       <div className="flex h-full flex-col gap-1 py-2 pl-3.5 pr-2.5">
         <div className="flex items-center gap-1.5 text-[9px]">
           <span className="rounded px-1 py-0.5 font-medium" style={{ background: `${color}22`, color }}>{TYPE_LABEL[ev.type] ?? ev.type}</span>
@@ -140,7 +152,7 @@ function computeScope(story: StoryGraph, detail: { kind: string; id: string }) {
 }
 
 export default function StoryDetail({ story, portraitOf = () => null }: { story: StoryGraph; portraitOf?: (c: string) => string | null }) {
-  const { detailStack, eventMode, eventDepth, propLevel, pickEvent, openDetail, backDetail, jumpDetail, setEventMode, setEventDepth, set } = useUI();
+  const { detailStack, eventMode, eventDepth, propLevel, selEvent, editing, draft, applied, toggleEdit, draftDeleteEvent, setPendingEdge, setEditStage, setPreview, pickEvent, openDetail, backDetail, jumpDetail, setEventMode, setEventDepth, set } = useUI();
   const detail = detailStack[detailStack.length - 1];
   const isEvent = detail?.kind === "event";
   const [baseNodes, setBaseNodes] = useState<Node[]>([]);
@@ -158,6 +170,25 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
   }, [story, detail, eventMode, eventDepth]);
   const scopeIds = useMemo(() => new Set(view.nodes.map((n) => n.id)), [view]);
   const animMax = eventMode === "blast" ? view.downMax : eventMode === "trace" ? view.upMax : 0;
+
+  // 改本：下游波及范围（确定性 BFS）
+  const affected = useMemo(() => {
+    if (!editing) return new Set<string>();
+    const adj = new Map<string, string[]>();
+    for (const e of story.events) adj.set(e.id, []);
+    for (const e of draft.addEvents) adj.set(e.id, []);
+    for (const ed of [...story.edges, ...draft.addEdges]) if (ed.type !== "contradicts") adj.get(ed.from)?.push(ed.to);
+    const seeds = [...draft.removeEventIds, ...draft.addEvents.map((e) => e.id), ...draft.removeEdges.map((r) => r.to)];
+    const seen = new Set<string>(seeds);
+    let frontier = [...seeds];
+    while (frontier.length) {
+      const next: string[] = [];
+      for (const id of frontier) for (const nb of adj.get(id) ?? []) if (!seen.has(nb)) { seen.add(nb); next.push(nb); }
+      frontier = next;
+    }
+    seeds.forEach((s) => seen.delete(s));
+    return seen;
+  }, [editing, draft, story]);
 
   const metrics = useMemo(() => {
     if (!isEvent || !view.meta) return null;
@@ -180,18 +211,31 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
     let live = true;
     setLoading(true);
     const meta = view.meta as Map<string, { side: Side; layer: number }> | null;
-    const rfNodes: Node[] = view.nodes.map((ev) => {
+    // 草稿新增事件并入布局（去重）
+    const scopeSet = new Set(view.nodes.map((n) => n.id));
+    const allNodes = editing ? [...view.nodes, ...draft.addEvents.filter((e) => !scopeSet.has(e.id))] : view.nodes;
+    const rfNodes: Node[] = allNodes.map((ev) => {
       const m = meta?.get(ev.id);
       return {
         id: ev.id, type: "story", position: { x: 0, y: 0 },
         data: meta
-          ? { ev, side: m?.side, layer: m?.layer, sideMax: m?.side === "up" ? view.upMax : view.downMax, mode: eventMode, origin: m?.side === "origin" }
-          : { ev, role: view.spine.has(ev.id) ? "spine" : "ctx" },
+          ? { ev, side: m?.side, layer: m?.layer, sideMax: m?.side === "up" ? view.upMax : view.downMax, mode: eventMode, origin: m?.side === "origin", affected: affected.has(ev.id) }
+          : { ev, role: view.spine.has(ev.id) ? "spine" : "ctx", affected: affected.has(ev.id) },
       };
     });
-    const rfEdges: Edge[] = view.edges.map((ed, i) => {
-      const color = EDGE_COLOR[ed.type] ?? "#475569";
-      return { id: `e${i}`, source: ed.from, target: ed.to, label: EDGE_LABEL[ed.type] ?? ed.type, type: "default", markerEnd: { type: MarkerType.ArrowClosed, color, width: 15, height: 15 }, style: { stroke: color, strokeWidth: 1.4, strokeDasharray: ed.type === "contradicts" ? "5 4" : undefined }, labelStyle: { fill: "#cbd5e1", fontSize: 9 }, labelBgStyle: { fill: "#0f1015", fillOpacity: 0.85 }, labelBgPadding: [3, 1] as [number, number], data: { type: ed.type } };
+    const nodeIds = new Set(rfNodes.map((n) => n.id));
+    const allEdges = editing ? [...view.edges, ...draft.addEdges.filter((e) => nodeIds.has(e.from) && nodeIds.has(e.to))] : view.edges;
+    const rfEdges: Edge[] = allEdges.map((ed, i) => {
+      let color = EDGE_COLOR[ed.type] ?? "#475569";
+      let dash = ed.type === "contradicts" ? "5 4" : undefined;
+      let w = 1.4, op = 1, anim = false;
+      if (editing) {
+        const removedEdge = draft.removeEdges.some((r) => r.from === ed.from && r.to === ed.to) || draft.removeEventIds.includes(ed.from) || draft.removeEventIds.includes(ed.to);
+        const newEdge = draft.addEdges.some((a) => a.from === ed.from && a.to === ed.to);
+        if (removedEdge) { color = "#52525b"; dash = "3 3"; op = 0.35; }
+        else if (newEdge) { color = "#34d399"; w = 2; anim = true; }
+      }
+      return { id: `e${i}`, source: ed.from, target: ed.to, label: EDGE_LABEL[ed.type] ?? ed.type, type: "default", animated: anim, markerEnd: { type: MarkerType.ArrowClosed, color, width: 15, height: 15 }, style: { stroke: color, strokeWidth: w, strokeDasharray: dash, opacity: op }, labelStyle: { fill: "#cbd5e1", fontSize: 9 }, labelBgStyle: { fill: "#0f1015", fillOpacity: 0.85 }, labelBgPadding: [3, 1] as [number, number], data: { type: ed.type } };
     });
     const g: any = { id: "root", layoutOptions: { "elk.algorithm": "layered", "elk.direction": "RIGHT", "elk.layered.spacing.nodeNodeBetweenLayers": "96", "elk.spacing.nodeNode": "30", "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX" }, children: rfNodes.map((n) => ({ id: n.id, width: NODE_W, height: NODE_H })), edges: rfEdges.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })) };
     elk.layout(g).then((res: any) => {
@@ -202,7 +246,26 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
       setLoading(false);
     }).catch(() => { if (live) setLoading(false); });
     return () => { live = false; };
-  }, [view, eventMode]);
+  }, [view, eventMode, editing, draft, affected]);
+
+  // 改本三段流水线：草稿变化 → ②引擎划范围(动画) → ③求解器盖章(/preview)
+  useEffect(() => {
+    if (!editing) return;
+    const dirty = draft.removeEventIds.length + draft.addEvents.length + draft.removeEdges.length > 0;
+    if (!dirty) { setEditStage("idle"); setPreview(null); return; }
+    let live = true;
+    setEditStage("frame");
+    setPreview(null);
+    const t = setTimeout(async () => {
+      if (!live) return;
+      setEditStage("verify");
+      try {
+        const p = await postPreview({ addEvents: draft.addEvents, addEdges: draft.addEdges, removeEventIds: draft.removeEventIds, removeEdges: draft.removeEdges }, applied);
+        if (live) { setPreview(p); setEditStage("done"); }
+      } catch { if (live) setEditStage("done"); }
+    }, 1150);
+    return () => { live = false; clearTimeout(t); };
+  }, [editing, draft, applied, setEditStage, setPreview]);
 
   // 切换 scope 后自动 fit（相机平滑）
   useEffect(() => { if (!loading && rf) rf.fitView({ padding: 0.16, duration: 420 }); }, [baseNodes, rf]); // eslint-disable-line
@@ -267,7 +330,23 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
               {[1, 2].map((d) => (<button key={d} onClick={() => setEventDepth(d)} className={`rounded px-1.5 py-0.5 ${eventDepth === d ? "bg-ink-700 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"}`}>{d}跳</button>))}
             </div>
           )}
-          <span className="text-[10px] text-zinc-600">工具条作用于「焦点」节点</span>
+          <span className="mx-1 h-4 w-px bg-ink-700" />
+          <button onClick={toggleEdit} className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10.5px] transition-colors ${editing ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-200" : "border-ink-700 text-zinc-300 hover:border-emerald-400/50 hover:text-emerald-200"}`}>
+            <Pencil size={12} /> {editing ? "退出改本" : "改本"}
+          </button>
+          {editing && selEvent && !draft.removeEventIds.includes(selEvent) && (
+            <>
+              <button onClick={() => draftDeleteEvent(selEvent)} className="flex items-center gap-1 rounded-lg border border-rose-400/50 bg-rose-500/10 px-2 py-1 text-[10.5px] text-rose-200 hover:bg-rose-500/20"><Trash2 size={12} /> 删除「{(story.events.find((e) => e.id === selEvent)?.title ?? "").slice(0, 8)}」</button>
+              {(() => {
+                const succ = [...story.edges, ...draft.addEdges].find((e) => e.from === selEvent && !draft.removeEdges.some((r) => r.from === e.from && r.to === e.to));
+                return succ ? (
+                  <button onClick={() => setPendingEdge({ from: selEvent, to: succ.to })} className="flex items-center gap-1 rounded-lg border border-accent/50 bg-accent/10 px-2 py-1 text-[10.5px] text-accent-soft hover:bg-accent/20"><Sparkles size={12} /> 在此后插入剧情</button>
+                ) : null;
+              })()}
+            </>
+          )}
+          {editing && <span className="text-[10px] text-zinc-600">选中事件可删/插入 · 或点画布上的因果边</span>}
+          {!editing && <span className="text-[10px] text-zinc-600">工具条作用于「焦点」节点</span>}
         </div>
       )}
 
@@ -285,11 +364,15 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
 
       <ReactFlow nodes={baseNodes} edges={edges} nodeTypes={nodeTypes} onInit={setRf} fitView fitViewOptions={{ padding: 0.16 }} minZoom={0.2} maxZoom={1.6} nodesDraggable nodesConnectable={false}
         onNodeClick={(_, n) => { pickEvent(n.id); rf?.setCenter(n.position.x + NODE_W / 2, n.position.y + NODE_H / 2, { zoom: rf.getZoom?.() ?? 0.85, duration: 380 }); }}
-        onNodeDoubleClick={(_, n) => openDetail("event", n.id, "explore")} proOptions={{ hideAttribution: true }}>
+        onNodeDoubleClick={(_, n) => { if (!editing) openDetail("event", n.id, "explore"); }}
+        onEdgeClick={(_, e) => { if (editing) setPendingEdge({ from: e.source!, to: e.target! }); }}
+        proOptions={{ hideAttribution: true }}>
         <Background color="#1b1d26" gap={24} />
       </ReactFlow>
 
-      <div className="absolute bottom-3 right-3 z-10"><StoryMinimap story={story} highlight={scopeIds} caption={`${kindLabel}：${labelOf(detail)}`} portraitOf={portraitOf} /></div>
+      <InsertPanel story={story} />
+      <EditHUD />
+      {!editing && <div className="absolute bottom-3 right-3 z-10"><StoryMinimap story={story} highlight={scopeIds} caption={`${kindLabel}：${labelOf(detail)}`} portraitOf={portraitOf} /></div>}
     </div>
   );
 }

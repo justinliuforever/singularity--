@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Clapperboard, LogIn, MousePointerClick, Loader2, Stethoscope } from "lucide-react";
 import { sliceGraph, type Graph, type StoryGraph } from "@liumang/shared";
-import { fetchGraph, fetchStory, fetchAudit } from "./lib/api";
+import { fetchGraph, fetchStory, fetchAudit, postPreview } from "./lib/api";
 import { useUI } from "./store";
+import { applyDraft } from "./lib/draft";
 import RelationLens from "./components/RelationLens";
 import StoryCanvas from "./components/StoryCanvas";
 import StoryDetail from "./components/StoryDetail";
@@ -20,8 +21,17 @@ export default function App() {
   const [err, setErr] = useState<string | null>(null);
   const [actOpen, setActOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
-  const { mode, act, perspective, selEvent, detailStack, audit, set, setAudit, enterChar } = useUI();
+  const { mode, act, perspective, selEvent, detailStack, audit, applied, set, setAudit, enterChar, closeDetail } = useUI();
   const detail = detailStack[detailStack.length - 1] ?? null;
+  /** 本会话生效的故事图 = 原图 + 已应用改动（"保留"后整张图都反映它；刷新即还原，不写本子） */
+  const eStory = useMemo(() => (story ? applyDraft(story, applied) : null), [story, applied]);
+  // 应用删除后，若当前锚点/选中事件已不在图中 → 优雅回退，避免空详图
+  useEffect(() => {
+    if (!eStory) return;
+    const ids = new Set(eStory.events.map((e) => e.id));
+    if (detail?.kind === "event" && !ids.has(detail.id)) closeDetail();
+    if (selEvent && !ids.has(selEvent)) set({ selEvent: null });
+  }, [eStory, detail, selEvent, closeDetail, set]);
 
   useEffect(() => {
     fetchGraph()
@@ -32,8 +42,14 @@ export default function App() {
       })
       .catch((e) => setErr(String(e.message ?? e)));
     fetchStory().then(setStory).catch(() => {});
-    fetchAudit().then(setAudit).catch(() => {});
-  }, [set, setAudit]);
+  }, [set]);
+
+  // 体检随"已应用改动"刷新：无改动→base 体检；有改动→对 base+applied 重检（徽章不再过时）
+  useEffect(() => {
+    const empty = !applied.addEvents.length && !applied.addEdges.length && !applied.removeEventIds.length && !applied.removeEdges.length;
+    if (empty) { fetchAudit().then(setAudit).catch(() => {}); return; }
+    postPreview(applied).then((p) => setAudit({ findings: p.after.findings, stats: p.after.stats })).catch(() => {});
+  }, [applied, setAudit]);
 
   const slice = useMemo(() => (graph ? sliceGraph(graph, act, perspective) : null), [graph, act, perspective]);
   const curActName = useMemo(() => graph?.meta.acts.find((a) => a.ord === act)?.name ?? `第${act}幕`, [graph, act]);
@@ -84,11 +100,11 @@ export default function App() {
           <div className="relative min-h-0 flex-1">
             {mode === "scene" ? (
               <RelationLens graph={graph} />
-            ) : story ? (
+            ) : eStory ? (
               detail ? (
-                <StoryDetail story={story} portraitOf={portraitOf} />
+                <StoryDetail story={eStory} portraitOf={portraitOf} />
               ) : (
-                <StoryCanvas story={story} portraitOf={portraitOf} />
+                <StoryCanvas story={eStory} portraitOf={portraitOf} />
               )
             ) : (
               <div className="grid h-full place-items-center text-zinc-500"><div className="flex items-center gap-2 text-sm"><Loader2 size={15} className="animate-spin" />编织故事图…</div></div>
@@ -106,10 +122,10 @@ export default function App() {
             ) : (
               <ScenePanel graph={graph} onEnter={enterChar} />
             )
-          ) : selEvent && story ? (
-            <EventDetail story={story} eventId={selEvent} anchorId={detail?.kind === "event" ? detail.id : null} />
+          ) : selEvent && eStory ? (
+            <EventDetail story={eStory} eventId={selEvent} anchorId={detail?.kind === "event" ? detail.id : null} />
           ) : (
-            <GodPanel graph={graph} act={act} story={story} />
+            <GodPanel graph={graph} act={act} story={eStory} />
           )}
         </aside>
       </div>

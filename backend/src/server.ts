@@ -13,6 +13,8 @@ import { clueById } from "./clues.js";
 import { loadStory } from "./story.js";
 import { auditStory } from "./audit.js";
 import { solveStory } from "./solver.js";
+import { previewEdit } from "./preview.js";
+import { suggestInserts } from "./suggest.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv({ path: path.resolve(__dirname, "../../.env") });
@@ -37,6 +39,25 @@ app.get("/graph", (c) => c.json(GRAPH));
 app.get("/story", (c) => {
   try {
     return c.json(loadStory());
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// P4 ①LLM 编剧助手：在 A→B 之间提议新剧情选项
+app.post("/suggest", async (c) => {
+  try {
+    const { fromId, toId } = await c.req.json<{ fromId: string; toId: string }>();
+    return c.json(await suggestInserts(fromId, toId));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// P4 改本预览：草稿 delta → before→after 体检 diff（不落盘）
+app.post("/preview", async (c) => {
+  try {
+    return c.json(await previewEdit(await c.req.json()));
   } catch (e: any) {
     return c.json({ error: String(e?.message ?? e) }, 500);
   }

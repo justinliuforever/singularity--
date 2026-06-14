@@ -35,6 +35,31 @@ export async function fetchAudit(): Promise<Audit> {
   return r.json();
 }
 
+export interface EditDelta {
+  addEvents?: any[];
+  addEdges?: { from: string; to: string; type: string; note: string }[];
+  removeEventIds?: string[];
+  removeEdges?: { from: string; to: string }[];
+}
+export interface PreviewResult {
+  before: Record<string, number>;
+  after: { stats: Record<string, number>; findings: Finding[] };
+  added: Finding[];
+  cleared: Finding[];
+}
+export async function postPreview(delta: EditDelta, applied?: EditDelta): Promise<PreviewResult> {
+  const r = await fetch(`${BASE}/preview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
+  if (!r.ok) throw new Error(`preview ${r.status}`);
+  return r.json();
+}
+
+export interface SuggestOption { title: string; summary: string; type: string; actors: string[] }
+export async function suggestInserts(fromId: string, toId: string): Promise<{ options: SuggestOption[]; raw?: string }> {
+  const r = await fetch(`${BASE}/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fromId, toId }) });
+  if (!r.ok) throw new Error(`suggest ${r.status}`);
+  return r.json();
+}
+
 export interface Grounding {
   pokesWall: boolean;
   drewOn: string[];

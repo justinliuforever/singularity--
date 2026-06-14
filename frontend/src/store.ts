@@ -1,5 +1,17 @@
 import { create } from "zustand";
-import type { Audit, Severity } from "./lib/api";
+import type { StoryEvent, StoryEdge } from "@liumang/shared";
+import type { Audit, Severity, PreviewResult } from "./lib/api";
+
+/** P4 改本草稿（仅会话，不落盘） */
+export interface Draft {
+  addEvents: StoryEvent[];
+  addEdges: StoryEdge[];
+  removeEventIds: string[];
+  removeEdges: { from: string; to: string }[];
+}
+const emptyDraft = (): Draft => ({ addEvents: [], addEdges: [], removeEventIds: [], removeEdges: [] });
+/** 三段流水线当前阶段 */
+export type EditStage = "idle" | "frame" | "verify" | "done";
 
 /** 两种模式 = 一引擎两面 G(幕,视角)：现场(玩家·迷雾) / 上帝(创作·全知) */
 export type Mode = "scene" | "god";
@@ -46,6 +58,28 @@ interface UIState {
   flagged: Record<string, Severity>;
   setAudit: (a: Audit) => void;
 
+  /** P4 改本：编辑模式 + 草稿 + 三段流水线 + 预览结果 */
+  editing: boolean;
+  draft: Draft;
+  /** 已应用层：点"应用(本会话)"后，把草稿并入这里 → effectiveStory 永久反映（刷新即还原，不写本子） */
+  applied: Draft;
+  editStage: EditStage;
+  preview: PreviewResult | null;
+  /** 正在编辑的边（点边后弹插入/删除面板） */
+  pendingEdge: { from: string; to: string } | null;
+  setPendingEdge: (e: { from: string; to: string } | null) => void;
+  toggleEdit: () => void;
+  draftDeleteEvent: (id: string) => void;
+  draftRemoveEdge: (from: string, to: string) => void;
+  draftInsert: (ev: StoryEvent, fromId: string, toId: string) => void;
+  clearDraft: () => void;
+  /** 应用草稿：并入 applied 层、退出编辑（本会话生效） */
+  commitDraft: () => void;
+  /** 还原全部会话改动（清空 applied + draft） */
+  resetSession: () => void;
+  setEditStage: (s: EditStage) => void;
+  setPreview: (p: PreviewResult | null) => void;
+
   /** L2 聚焦详图导航栈（空=L1总览，栈顶=当前详图）——支持面包屑/返回上一步 */
   detailStack: { kind: DetailKind; id: string }[];
 
@@ -85,6 +119,12 @@ export const useUI = create<UIState>((set) => ({
   propLevel: -1,
   audit: null,
   flagged: {},
+  editing: false,
+  draft: emptyDraft(),
+  applied: emptyDraft(),
+  editStage: "idle",
+  preview: null,
+  pendingEdge: null,
   detailStack: [],
 
   set: (p) => set(p),
@@ -94,6 +134,40 @@ export const useUI = create<UIState>((set) => ({
     for (const f of a.findings) for (const ev of f.events) if (!flagged[ev] || rank[f.severity] < rank[flagged[ev]]) flagged[ev] = f.severity;
     set({ audit: a, flagged });
   },
+  setPendingEdge: (e) => set({ pendingEdge: e }),
+  toggleEdit: () => set((s) => ({ editing: !s.editing, draft: emptyDraft(), editStage: "idle", preview: null, pendingEdge: null })),
+  draftDeleteEvent: (id) =>
+    set((s) => (s.draft.removeEventIds.includes(id) ? {} : { draft: { ...s.draft, removeEventIds: [...s.draft.removeEventIds, id] } })),
+  draftRemoveEdge: (from, to) =>
+    set((s) => (s.draft.removeEdges.some((r) => r.from === from && r.to === to) ? { pendingEdge: null } : { draft: { ...s.draft, removeEdges: [...s.draft.removeEdges, { from, to }] }, pendingEdge: null })),
+  draftInsert: (ev, fromId, toId) =>
+    set((s) => ({
+      draft: {
+        ...s.draft,
+        addEvents: [...s.draft.addEvents, ev],
+        addEdges: [...s.draft.addEdges, { from: fromId, to: ev.id, type: "causes", note: "（新插入）" }, { from: ev.id, to: toId, type: "causes", note: "（新插入）" }],
+        removeEdges: [...s.draft.removeEdges, { from: fromId, to: toId }],
+      },
+      pendingEdge: null,
+    })),
+  clearDraft: () => set({ draft: emptyDraft(), editStage: "idle", preview: null, pendingEdge: null }),
+  commitDraft: () =>
+    set((s) => ({
+      applied: {
+        addEvents: [...s.applied.addEvents, ...s.draft.addEvents],
+        addEdges: [...s.applied.addEdges, ...s.draft.addEdges],
+        removeEventIds: [...s.applied.removeEventIds, ...s.draft.removeEventIds],
+        removeEdges: [...s.applied.removeEdges, ...s.draft.removeEdges],
+      },
+      draft: emptyDraft(),
+      editing: false,
+      editStage: "idle",
+      preview: null,
+      pendingEdge: null,
+    })),
+  resetSession: () => set({ applied: emptyDraft(), draft: emptyDraft(), editing: false, editStage: "idle", preview: null, pendingEdge: null }),
+  setEditStage: (s2) => set({ editStage: s2 }),
+  setPreview: (p) => set({ preview: p }),
   pickFact: (id) => set((s) => ({ selFact: s.selFact === id ? null : id })),
   pickEvent: (id) => set((s) => ({ selEvent: s.selEvent === id ? null : id })),
   openDetail: (kind, id, mode) =>

@@ -6,6 +6,7 @@
  */
 import { loadStory } from "./story.js";
 import type { Finding } from "./audit.js";
+import type { StoryGraph } from "@liumang/shared";
 // @ts-ignore clingo-wasm 无类型声明
 import clingo from "clingo-wasm";
 
@@ -21,8 +22,8 @@ function yearOf(s: string): number | null {
 /** 事件 id → ASP 安全原子名 */
 const sym = (id: string) => "e" + id.replace(/[^A-Za-z0-9]/g, "").toLowerCase();
 
-export async function solveStory(): Promise<{ findings: Finding[]; solver: string; temporal: number; unsolvable: number }> {
-  const { events, edges } = loadStory();
+export async function solveStory(story: StoryGraph = loadStory()): Promise<{ findings: Finding[]; solver: string; temporal: number; unsolvable: number }> {
+  const { events, edges } = story;
   const byId = new Map(events.map((e) => [e.id, e]));
   const symToId = new Map(events.map((e) => [sym(e.id), e.id]));
   const causal = edges.filter((e) => e.type !== "contradicts");

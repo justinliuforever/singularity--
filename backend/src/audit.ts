@@ -4,6 +4,7 @@
  * 外部锚定原则：这些都是图上可证的事实，不让 LLM 自评。
  */
 import { loadStory } from "./story.js";
+import type { StoryGraph } from "@liumang/shared";
 
 export type Severity = "error" | "warn" | "info";
 export interface Finding {
@@ -42,8 +43,8 @@ function tarjan(nodes: string[], out: Map<string, string[]>): string[][] {
   return sccs;
 }
 
-export function auditStory() {
-  const { events, edges } = loadStory();
+export function auditStory(story: StoryGraph = loadStory()) {
+  const { events, edges } = story;
   const byId = new Map(events.map((e) => [e.id, e]));
   const title = (id: string) => byId.get(id)?.title ?? id;
   const causal = edges.filter((e) => e.type !== "contradicts");
