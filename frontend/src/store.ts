@@ -28,8 +28,24 @@ interface UIState {
   hoverFact: string | null;
   hoverChar: string | null;
 
+  /** 创作画布：选中/悬停的事件 */
+  selEvent: string | null;
+  hoverEvent: string | null;
+
+  /** L2 聚焦详图导航栈（空=L1总览，栈顶=当前详图）——支持面包屑/返回上一步 */
+  detailStack: { kind: "char" | "event" | "act"; id: string }[];
+
   set: (p: Partial<UIState>) => void;
   pickFact: (id: string | null) => void;
+  pickEvent: (id: string | null) => void;
+  /** 钻入（压栈，跳过与栈顶重复） */
+  openDetail: (kind: "char" | "event" | "act", id: string) => void;
+  /** 返回上一步（弹栈一层） */
+  backDetail: () => void;
+  /** 跳到面包屑第 i 步（-1=回总览） */
+  jumpDetail: (i: number) => void;
+  /** 回总览（清空） */
+  closeDetail: () => void;
   /** 进入某角色视角（现场模式核心动作） */
   enterChar: (id: string) => void;
   /** 切模式 */
@@ -46,9 +62,22 @@ export const useUI = create<UIState>((set) => ({
   selFact: null,
   hoverFact: null,
   hoverChar: null,
+  selEvent: null,
+  hoverEvent: null,
+  detailStack: [],
 
   set: (p) => set(p),
   pickFact: (id) => set((s) => ({ selFact: s.selFact === id ? null : id })),
+  pickEvent: (id) => set((s) => ({ selEvent: s.selEvent === id ? null : id })),
+  openDetail: (kind, id) =>
+    set((s) => {
+      const top = s.detailStack[s.detailStack.length - 1];
+      const dup = top && top.kind === kind && top.id === id;
+      return { detailStack: dup ? s.detailStack : [...s.detailStack, { kind, id }], selEvent: kind === "event" ? id : null };
+    }),
+  backDetail: () => set((s) => ({ detailStack: s.detailStack.slice(0, -1) })),
+  jumpDetail: (i) => set((s) => ({ detailStack: i < 0 ? [] : s.detailStack.slice(0, i + 1) })),
+  closeDetail: () => set({ detailStack: [] }),
   enterChar: (id) => set({ perspective: id, selFact: null }),
   setMode: (m) => set(m === "god" ? { mode: "god", perspective: "god", selFact: null } : { mode: "scene", selFact: null }),
 }));

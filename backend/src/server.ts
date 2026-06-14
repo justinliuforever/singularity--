@@ -10,6 +10,7 @@ import { compileGraph } from "./compile.js";
 import { loadKB, buildSystemPrompt, leakAudit, callDeepSeek, analyzeTurn, probeQuestions, type Msg } from "./chat.js";
 import { loadDossier, loadAct } from "./dossier.js";
 import { clueById } from "./clues.js";
+import { loadStory } from "./story.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv({ path: path.resolve(__dirname, "../../.env") });
@@ -29,6 +30,15 @@ app.use("*", cors());
 
 app.get("/health", (c) => c.json({ ok: true }));
 app.get("/graph", (c) => c.json(GRAPH));
+
+// 创作画布 · 故事图（事件因果层）
+app.get("/story", (c) => {
+  try {
+    return c.json(loadStory());
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
 
 app.post("/chat", async (c) => {
   try {

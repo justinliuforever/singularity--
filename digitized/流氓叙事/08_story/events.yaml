@@ -1,0 +1,945 @@
+# 流氓叙事 · 客观事件层（Events）
+# 忠实转录自：02_truth/阴谋网.md（加害链/复仇链/情感血缘网/动机—因果速记）、
+#              00_index/timeline.md（上帝视角时间线）、02_truth/真相还原.md（F100–F202 定义）。
+# 命名归一：羌青瓷=瑞法·莱诺（统一羌青瓷）；程聿怀=程雨怀；蒋伯驾=将伯驾；布雷诺=布雷德。
+# 人物勿混：伯纳德·莱诺=羌青瓷兄长（后被程走柳所杀）；卢特·莱诺=羌青瓷叔叔（娶程走柳、收蒋伯驾义子，后被以撒所杀）。
+# act 字段：该事件在游戏第几幕被揭示给全场；纯背景/开局前无揭示填 null。
+# access: referee_only
+
+events:
+
+  # ============ 世界观 / 远景背景（百年）============
+  - id: E001
+    type: Event
+    title: 莱诺家族兴起（以新闻发家，实则煽动战争卖军火）
+    summary: 19世纪中期莱诺家族于西国兴起，以新闻发家、创立莱诺新闻奖，实则经常煽动舆论挑起战争、借机贩卖军火、大发战争横财。
+    story_time: 19世纪中期
+    act: 第七幕
+    actors:
+      - {char: 莱诺家族, role: agent}
+    facts: [F005, F101]
+    motive: 制造战争→卖武器→赚战争横财
+    effect: 新闻只是幌子；主业是制造战争卖武器，为后续在布雷诺反复挑火埋下家族基因
+
+  - id: E002
+    type: Event
+    title: 殖民者强行划分布雷族与诺族
+    summary: 百年前发达国家殖民布雷诺，一高官强行把民众划分为布雷族、诺族，把个子高/皮肤白的诺族定为优等民族与统治阶级（官方高层/总统皆诺族）。
+    story_time: 百年前（殖民期）
+    act: 第一幕
+    actors:
+      - {char: 殖民高官, role: agent}
+      - {char: 布雷族, role: patient}
+      - {char: 诺族, role: beneficiary}
+    facts: [F001, F002, F016]
+    motive: 殖民统治分而治之
+    effect: 两族不再和睦；布雷族被欺压，为日后种族冲突/屠杀埋下结构性裂痕
+
+  - id: E003
+    type: Event
+    title: 布雷族长期被欺压（教堂/慢跑禁令等）
+    summary: 殖民结束后百年两族不再和睦，布雷族被欺压（教堂仅白日许诺族入、布雷族只能晚6点钟声后入；战时士兵街头军靴慢跑震慑，慢跑后被总统禁止）。
+    story_time: 殖民结束后—百年
+    act: 第一幕
+    actors:
+      - {char: 诺族, role: agent}
+      - {char: 布雷族, role: patient}
+    facts: [F016, F018]
+    motive: 维持统治阶级压迫
+    effect: 布雷族长期受压，成为日后被煽动屠杀的火药桶
+
+  # ============ 出生节点（1960s–1980s）============
+  - id: E010
+    type: Event
+    title: 奥丁生于布雷诺
+    summary: 1960年奥丁生于布雷诺；后成为狂草帮/怒河首领。
+    story_time: 1960
+    act: null
+    actors:
+      - {char: 奥丁, role: patient}
+    facts: [F180]
+    motive: 
+    effect: 
+
+  - id: E011
+    type: Event
+    title: 夏尔·莱诺强娶并囚禁黎梦鲸
+    summary: 心理治疗中夏尔·莱诺对心理医生黎梦鲸移情，错把患者对医生的依赖当爱情，凭家族势力强娶并囚禁黎梦鲸，致其心理扭曲、行为极端。
+    story_time: 约1968
+    act: 第四幕
+    actors:
+      - {char: 夏尔·莱诺, role: agent}
+      - {char: 黎梦鲸, role: patient}
+    facts: [F111]
+    motive: 错把患者依赖当爱情 + 家族强权
+    effect: 生下瑞法（羌青瓷）；黎梦鲸逼瑞法严酷训练，瑞法从小不知什么是爱、只知什么不是爱
+
+  - id: E012
+    type: Event
+    title: 瑞法·莱诺（羌青瓷）出生
+    summary: 1970年瑞法·莱诺（别名羌青瓷）生于西国莱诺家族，为黎梦鲸被夏尔强娶囚禁期间所生；现任莱诺家族家主。
+    story_time: 1970
+    act: 第四幕
+    actors:
+      - {char: 羌青瓷, role: patient}
+      - {char: 夏尔·莱诺, role: agent}
+      - {char: 黎梦鲸, role: agent}
+    facts: [F110, F111]
+    motive: 
+    effect: 被母逼迫完成其未竟事业、严酷训练，畸形成长
+
+  - id: E013
+    type: Event
+    title: 程聿怀出生
+    summary: 1972年程聿怀生于广府；父程亮冬（记者）、母肖明月（历史学）、舅肖须言（战地记者）。
+    story_time: 1972
+    act: null
+    actors:
+      - {char: 程聿怀, role: patient}
+      - {char: 程亮冬, role: witness}
+      - {char: 肖明月, role: witness}
+    facts: [F023, F121]
+    motive: 
+    effect: 
+
+  - id: E014
+    type: Event
+    title: 缪元俨强占蒋沁春，生蒋伯驾
+    summary: 1975年春缪家家主缪元俨醉酒强占保洁员蒋沁春，事后将其扫地出门；蒋沁春独自抚养蒋伯驾长大。
+    story_time: 1975春
+    act: 第七幕
+    actors:
+      - {char: 缪元俨, role: agent}
+      - {char: 蒋沁春, role: patient}
+      - {char: 蒋伯驾, role: patient}
+    facts: [F212, F023, F151]
+    motive: 醉酒强暴
+    effect: 蒋伯驾为私生子，少年被接回缪家只作竞争催化剂/活靶子，长成工具人创伤
+
+  - id: E015
+    type: Event
+    title: 奥丁15岁，家人在种族战争逃命中倒下
+    summary: 1975年种族战争再爆发，奥丁家人逃命中一个个倒下、在其保护下奥丁幸存（跑啊，奥丁！）。
+    story_time: 1975
+    act: 第三幕
+    actors:
+      - {char: 奥丁, role: patient}
+      - {char: 奥丁家人, role: patient}
+    facts: [F180, F063]
+    motive: 
+    effect: 失去家人的奥丁后组建狂草帮收容战争孤儿；余生总奔跑前进、常听《born to run》
+
+  - id: E016
+    type: Event
+    title: 奥丁组建狂草帮
+    summary: 1975年后奥丁组建狂草帮，收容因战争无家可归的孤儿/残疾人/老人，同时容纳布雷族与诺族、不分种族，算半个义警。
+    story_time: 1975后
+    act: 第一幕
+    actors:
+      - {char: 奥丁, role: agent}
+      - {char: 狂草帮, role: beneficiary}
+    facts: [F180, F022, F014]
+    motive: 失去家人后收容受苦之人、不忍他人寻死
+    effect: 狂草帮成布雷诺唯一无种族冲突之地；因不分种族被其他布雷诺人讨厌
+
+  - id: E017
+    type: Event
+    title: 程走柳出生
+    summary: 1977年程走柳生于广府，程聿怀亲妹（相差五岁），与程聿怀互称同怀。
+    story_time: 1977
+    act: 第一幕
+    actors:
+      - {char: 程走柳, role: patient}
+      - {char: 程聿怀, role: witness}
+    facts: [F023, F133, F007]
+    motive: 
+    effect: 
+
+  - id: E018
+    type: Event
+    title: 缪宏谟出生
+    summary: 1977年缪宏谟生于皇宫赌场轮盘桌（母黎挽南临产破水就地分娩）；母为缪元俨三房太太、香江眼科名医。
+    story_time: 1977
+    act: null
+    actors:
+      - {char: 缪宏谟, role: patient}
+      - {char: 黎挽南, role: witness}
+      - {char: 缪元俨, role: witness}
+    facts: [F021, F023, F140]
+    motive: 
+    effect: 受母黎挽南影响成为眼科医生、想治病救人
+
+  - id: E019
+    type: Event
+    title: 阿奇出生
+    summary: 1980年阿奇生于布雷诺，布雷族人；后成为延迟的替身/另一半。
+    story_time: 1980
+    act: null
+    actors:
+      - {char: 阿奇, role: patient}
+    facts: [F190]
+    motive: 
+    effect: 
+
+  - id: E020
+    type: Event
+    title: 黛利拉出生（战争之子）
+    summary: 1981年黛利拉生于布雷诺，战争之子——种族冲突中男人强暴女性所生；母把自身伤害与恨意转移给她，故从小缺爱、缺安全感。
+    story_time: 1981
+    act: 第三幕
+    actors:
+      - {char: 黛利拉, role: patient}
+      - {char: 黛利拉生母, role: agent}
+    facts: [F170, F023, F055]
+    motive: 
+    effect: 黛利拉从小缺爱缺安全感，渴求爱；为日后悲剧人格埋线
+
+  - id: E021
+    type: Event
+    title: 以撒出生（诺族，患狂笑症）
+    summary: 1982年以撒生于布雷诺，本人及家族为诺族；患狂笑症（以撒在布雷诺意为笑），被村人视邪体入侵、遭驱邪，从小遭社会冷眼。
+    story_time: 1982
+    act: 第一幕
+    actors:
+      - {char: 以撒, role: patient}
+      - {char: 以撒祖母, role: witness}
+    facts: [F020, F023, F160]
+    motive: 
+    effect: 长成偏激、报复心极强的样子，把愤慨发泄在蝴蝶标本上；几乎没感受过真正的爱
+
+  # ============ 1990–1994 相爱与崩塌 ============
+  - id: E030
+    type: Event
+    title: 羌青瓷与程聿怀相爱（1990）
+    summary: 1990年瑞法（羌青瓷）在东国大学学心理，被同学程聿怀治愈；程表白被拒后持续追求，二人终在一起。羌青瓷爱程聿怀十五年（1990→2005）却沉默十年。
+    story_time: 1990
+    act: 第五幕
+    actors:
+      - {char: 羌青瓷, role: patient}
+      - {char: 程聿怀, role: agent}
+    facts: [F112]
+    motive: 程聿怀持之以恒追求；羌起初因不敢爱自己的治愈者而拒
+    effect: 二人相爱（核心反转：对外伪装纯恨，实为纯爱）；为后续抹忆/献祭埋下情感根
+
+  - id: E031
+    type: Event
+    title: 莱诺家族害死程亮冬（程聿怀父）
+    summary: 1994年程聿怀父亲程亮冬以布雷诺纪实纪录片再获莱诺新闻奖，在布雷诺领奖直播时出现故障凄惨离奇死亡，实为莱诺家族害死；母肖明月同年死亡。
+    story_time: 1994
+    act: 第五幕
+    actors:
+      - {char: 莱诺家族, role: agent}
+      - {char: 程亮冬, role: patient}
+      - {char: 肖明月, role: patient}
+      - {char: 程聿怀, role: witness}
+    facts: [F124, F121]
+    motive: 灭口查到家族真相的记者、维持伪善叙事
+    effect: 成为整条复仇线导火索；程聿怀孤身赴布雷诺查父死真相
+
+  - id: E032
+    type: Decision
+    title: 程走柳假意吵架赶走程聿怀
+    summary: 1994年家庭遭变故后，程走柳为让程聿怀奔向更好前程，假意与其吵架、将其赶走（对外表现为分道扬镳/理念不同）。
+    story_time: 1994
+    act: null
+    actors:
+      - {char: 程走柳, role: agent}
+      - {char: 程聿怀, role: patient}
+    facts: [F133, F222]
+    motive: 护兄长前程
+    effect: 兄妹分离；走柳后誓走父辈新闻路成记者
+
+  - id: E033
+    type: Event
+    title: 程聿怀孤身赴布雷诺查父死真相
+    summary: 1994年后程聿怀孤身赴布雷诺（糊口+查父死真相）；程走柳为给父澄清誓走父辈新闻之路成记者。
+    story_time: 1994后
+    act: null
+    actors:
+      - {char: 程聿怀, role: agent}
+      - {char: 程走柳, role: agent}
+    facts: [F121, F223]
+    motive: 查父死真相
+    effect: 引出1995程聿怀入布雷诺、发现家族真相、被抹忆
+
+  # ============ 1995 电台 / 抹忆 / 延迟诞生 ============
+  - id: E040
+    type: Event
+    title: 莱诺家族+缪家建布雷诺电台（挑火①）
+    summary: 1995年莱诺家族+缪家来布雷诺兴建电台，表面公益、实为挑两族争抢卖军火；蒋伯驾为建台东国负责人。
+    story_time: 1995
+    act: 第一幕
+    actors:
+      - {char: 莱诺家族, role: agent}
+      - {char: 缪家, role: agent}
+      - {char: 蒋伯驾, role: agent}
+      - {char: 布雷族, role: patient}
+      - {char: 诺族, role: patient}
+    facts: [F008, F103, F105]
+    motive: 制造战争→卖军火→战争横财
+    effect: 引发电台归属权争抢与两族冲突，死伤众多（1995屠杀口径之一）
+
+  - id: E041
+    type: Event
+    title: 程聿怀从羌青瓷电脑发现莱诺家族真相
+    summary: 1995年程聿怀从瑞法（羌青瓷）电脑发现莱诺家族真相，被第一继承人伯纳德·莱诺发现端倪。
+    story_time: 1995
+    act: 第五幕
+    actors:
+      - {char: 程聿怀, role: agent}
+      - {char: 羌青瓷, role: patient}
+      - {char: 伯纳德·莱诺, role: witness}
+    facts: [F113]
+    motive: 查父死真相
+    effect: 伯纳德欲杀程灭口；触发羌青瓷与伯纳德交易抹忆
+
+  - id: E042
+    type: Decision
+    title: 伯纳德欲杀程聿怀灭口，羌青瓷以交易劝止
+    summary: 1995年伯纳德欲杀程聿怀灭口；瑞法（羌青瓷）不许，与之交易：此后为家族做事+用火柴疗法催眠抹除程记忆，换程平安。
+    story_time: 1995
+    act: 第五幕
+    actors:
+      - {char: 伯纳德·莱诺, role: agent}
+      - {char: 羌青瓷, role: agent}
+      - {char: 程聿怀, role: patient}
+    facts: [F113]
+    motive: 伯纳德灭口；羌为护程聿怀活命
+    effect: 羌承诺为家族做事并抹除程记忆
+
+  - id: E043
+    type: Lie
+    title: 羌青瓷用火柴疗法抹除程聿怀记忆（含相爱过往）
+    summary: 1995年瑞法（羌青瓷）用火柴疗法（催眠）消除程聿怀关于父亲真相的记忆，并把二人相爱的全部过往一并抹去；程醒来彻底不记得羌青瓷。
+    story_time: 1995
+    act: 第二幕
+    actors:
+      - {char: 羌青瓷, role: agent}
+      - {char: 程聿怀, role: patient}
+    facts: [F113, F122, F004]
+    motive: 换程聿怀活命；自认再也配不上程聿怀的铭记
+    effect: 程失忆；2000重逢时不记得过往、为套情报一次次伤害羌青瓷，羌全部纵容
+
+  - id: E044
+    type: Event
+    title: 程聿怀在电台结识阿奇
+    summary: 1995年程聿怀以莱诺建电台需新闻专业者培训当地人为契机入布雷诺，在电台教布雷族新闻学/传播学，结识布雷族男孩阿奇。
+    story_time: 1995
+    act: null
+    actors:
+      - {char: 程聿怀, role: agent}
+      - {char: 阿奇, role: patient}
+    facts: [F121, F120]
+    motive: 糊口+查真相
+    effect: 二人结识，为日后共组延迟埋线
+
+  - id: E045
+    type: Event
+    title: 1995电台争夺引发种族大屠杀（口径之一）
+    summary: 1995年底电台争夺引发种族冲突，诺族压倒性屠杀布雷族（布雷族被屠杀近十万人）；程聿怀冒险拍摄、获教堂布雷族相救，决意带领布雷族反抗。
+    story_time: 1995底
+    act: 第四幕
+    actors:
+      - {char: 诺族, role: agent}
+      - {char: 布雷族, role: patient}
+      - {char: 程聿怀, role: witness}
+      - {char: 莱诺家族, role: agent}
+    facts: [F019, F708, F105]
+    motive: 莱诺挑火→两族争抢电台
+    effect: 程聿怀决意反抗、二次成为延迟（口径冲突见疑点：与2000决定性大屠杀竞争）
+
+  - id: E046
+    type: Decision
+    title: 程聿怀二次成为布雷族军师延迟
+    summary: 1995年失忆的程聿怀为再查父死真相，二次成为布雷族军师延迟（得名于布雷族把A音说成delay）；戴遮面帷帽避诺族识别报复，阿奇主动当替身。
+    story_time: 1995
+    act: 第五幕
+    actors:
+      - {char: 程聿怀, role: agent}
+      - {char: 阿奇, role: agent}
+    facts: [F120, F190, F017]
+    motive: 查父死真相、平息屠杀
+    effect: '延迟诞生；程与阿奇各为二分之一延迟'
+
+  - id: E047
+    type: Decision
+    title: 阿奇主动当延迟替身
+    summary: 因程聿怀表面身份是记者不愿延迟暴露、且诺族想刺杀延迟，阿奇主动提出当替身，替程出席活动、学程一举一动，后与程共组延迟符号。
+    story_time: 1995
+    act: 第五幕
+    actors:
+      - {char: 阿奇, role: agent}
+      - {char: 程聿怀, role: beneficiary}
+    facts: [F190]
+    motive: 护程聿怀、为大义
+    effect: 阿奇成延迟另一半；没有阿奇就没有完整的延迟
+
+  - id: E048
+    type: Event
+    title: 蒋伯驾撤离电台并暗示程聿怀离开
+    summary: 1995年电台负责人蒋伯驾撤离后电台一夜被两族盯上；蒋曾暗示程聿怀布雷诺不安全、趁早离开。
+    story_time: 1995
+    act: 第一幕
+    actors:
+      - {char: 蒋伯驾, role: agent}
+      - {char: 程聿怀, role: witness}
+    facts: [F008, F009]
+    motive: 
+    effect: 蒋伯驾↔程聿怀1995早有交集
+
+  - id: E049
+    type: Decision
+    title: 羌青瓷得知心脏芯片把柄，决意献祭程聿怀
+    summary: 1995–2000年瑞法（羌青瓷）为家族做事期间，得知家族致命把柄=植入历代家主心脏的芯片，遂决意爬上家主位、把芯片献祭给程聿怀。
+    story_time: 1995–2000
+    act: 第五幕
+    actors:
+      - {char: 羌青瓷, role: agent}
+      - {char: 程聿怀, role: beneficiary}
+    facts: [F102, F114]
+    motive: 对程聿怀的爱、以死成全复仇
+    effect: 为2005取芯片献祭埋下长线
+
+  - id: E050
+    type: Event
+    title: 黛利拉母亲死于1995屠杀，黛被摩伊拉收养
+    summary: 1995年黛利拉原生母死于屠杀，黛利拉成孤儿；遇姐姐妈妈摩伊拉，被其收为户口女儿（获布雷族身份证更安全）。
+    story_time: 1995
+    act: null
+    actors:
+      - {char: 黛利拉, role: patient}
+      - {char: 摩伊拉, role: agent}
+    facts: [F170, F015]
+    motive: 
+    effect: 黛利拉获新家与短暂的爱；摩伊拉后死于2000金狮医院大火
+
+  # ============ 1996 入帮 ============
+  - id: E060
+    type: Event
+    title: 黛利拉加入狂草帮，奥丁当女儿疼爱
+    summary: 1996年15岁黛利拉凭身手加入狂草帮当小打手；奥丁得知她是战争之子后心疼，把她当女儿疼爱（陪买最粉纱裙）。
+    story_time: 1996
+    act: 第三幕
+    actors:
+      - {char: 黛利拉, role: agent}
+      - {char: 奥丁, role: agent}
+    facts: [F171, F170, F056]
+    motive: 奥丁不忍战争之子受苦、给亲情安全感
+    effect: 黛利拉拥有新家与爱（但这些爱后在战争中一个个离她而去）
+
+  - id: E061
+    type: Event
+    title: 奥丁结识以撒并带入狂草帮
+    summary: 1996年奥丁以跑得够快就行破不可慢跑规矩、用《born to run》和笑话接纳以撒，征求其意愿后带入狂草帮；以撒是奥丁笑话唯一捧场者。
+    story_time: 1996
+    act: 第一幕
+    actors:
+      - {char: 奥丁, role: agent}
+      - {char: 以撒, role: patient}
+    facts: [F161, F160, F057]
+    motive: 收容受苦之人
+    effect: 以撒入狂草帮，与奥丁结羁绊
+
+  # ============ 2000 金狮医院 / 重逢结婚 / 大屠杀 ============
+  - id: E070
+    type: Event
+    title: 莱诺家族+缪家建金狮医院（挑火②）
+    summary: 2000年莱诺家族+缪家故技重施，在布雷诺新建金狮医院，欲挑更大战争谋更多战争财。
+    story_time: 2000
+    act: 第四幕
+    actors:
+      - {char: 莱诺家族, role: agent}
+      - {char: 缪家, role: agent}
+    facts: [F105]
+    motive: 制造更大战争→卖更多军火
+    effect: 金狮医院开业后2000中旬正式爆发决定性种族大屠杀
+
+  - id: E071
+    type: Decision
+    title: 羌青瓷主动申请赴布雷诺，改名羌青瓷
+    summary: 2000年莱诺家族要与延迟合作乃至联姻，瑞法主动申请获家族同意再赴布雷诺，改名羌青瓷（程聿怀曾纹青瓷提醒自己永远追求清白，瑞法把青瓷变成自己的名字）。
+    story_time: 2000
+    act: 第四幕
+    actors:
+      - {char: 羌青瓷, role: agent}
+    facts: [F114, F110]
+    motive: 接近程聿怀、推进献祭芯片计划
+    effect: 以金狮医院院长羌青瓷身份入场
+
+  - id: E072
+    type: Event
+    title: 伯纳德查出延迟即程聿怀，邀其合作
+    summary: 2000年伯纳德调查延迟发现就是程聿怀；接触中发现程主动提推进大屠杀想法，认为程变得像莱诺一样，遂邀其继续合作。
+    story_time: 2000
+    act: 第七幕
+    actors:
+      - {char: 伯纳德·莱诺, role: agent}
+      - {char: 程聿怀, role: patient}
+    facts: [F123, F708]
+    motive: 利用程聿怀推进大屠杀
+    effect: 程聿怀成帮伯纳德策划千禧年大屠杀的延迟（其无情保护壳创伤所致）
+
+  - id: E073
+    type: Event
+    title: 羌青瓷与程聿怀结婚（程仍失忆）
+    summary: 2000年羌青瓷与程聿怀（程仍失忆）结婚；此后五年羌演为利益联姻、不爱程，实则痛苦压抑全部的爱。
+    story_time: 2000
+    act: 第一幕
+    actors:
+      - {char: 羌青瓷, role: agent}
+      - {char: 程聿怀, role: patient}
+    facts: [F114, F003]
+    motive: 接近程聿怀、伪装纯恨/利益联姻
+    effect: 程一度只觉羌很擅长说谎，后才知羌说的全是真话
+
+  - id: E074
+    type: Event
+    title: 奥丁带狂草帮在金狮医院开业闹场，结识众人
+    summary: 2000年奥丁带狂草帮在金狮医院开业仪式闹场，认识羌青瓷、缪宏谟、程走柳、程聿怀，再见1995建电台的蒋伯驾。
+    story_time: 2000
+    act: 第一幕
+    actors:
+      - {char: 奥丁, role: agent}
+      - {char: 羌青瓷, role: witness}
+      - {char: 缪宏谟, role: witness}
+      - {char: 程走柳, role: witness}
+      - {char: 蒋伯驾, role: witness}
+    facts: [F181]
+    motive: 
+    effect: 众人初识；为日后并肩与结盟埋线
+
+  - id: E075
+    type: Event
+    title: 金狮医院小规模械斗，众人共同维持治安
+    summary: 2000年金狮医院小规模械斗，上述众人与狂草帮共同对抗暴民维持治安，奥丁开始信任他们、对蒋伯驾改观并喜欢蒋。
+    story_time: 2000
+    act: 第一幕
+    actors:
+      - {char: 奥丁, role: agent}
+      - {char: 蒋伯驾, role: agent}
+      - {char: 众人, role: agent}
+    facts: [F181]
+    motive: 维持治安、护平民
+    effect: 奥丁真正信任众人、对蒋伯驾改观
+
+  - id: E076
+    type: Decision
+    title: 蒋伯驾应瑞法提议雇佣兵在金狮医院屠杀
+    summary: 2000年蒋伯驾应瑞法（羌青瓷）提议，雇佣兵在金狮医院展开屠杀，为双方家族谋战争横财。
+    story_time: 2000
+    act: 第七幕
+    actors:
+      - {char: 蒋伯驾, role: agent}
+      - {char: 羌青瓷, role: agent}
+      - {char: 布雷诺民众, role: patient}
+    facts: [F707, F152]
+    motive: 为双方家族谋战争横财（蒋表层身份所为）
+    effect: 金狮医院屠杀；蒋后以此为认罪自污素材（战争罪）
+
+  - id: E077
+    type: Decision
+    title: 蒋伯驾找羌青瓷配合受控燃烧计划
+    summary: 伯纳德等人筹划两年的大屠杀背景下，蒋伯驾想阻止屠杀，判断羌青瓷不同于伯纳德、会在乎人命，遂找羌配合受控燃烧（以少部分人性命换更多人存活），并计划广播邀诺族官员来金狮医院免费体检。
+    story_time: 2000
+    act: 第三幕
+    actors:
+      - {char: 蒋伯驾, role: agent}
+      - {char: 羌青瓷, role: agent}
+    facts: [F050, F051, F052, F152]
+    motive: 以火灭火、救更多人；保全诺族五万人以反攻平息屠杀
+    effect: 羌应承计划；蒋把受控燃烧理念带给众人，最终推动清算
+
+  - id: E078
+    type: Event
+    title: 圣女骗局——诺族小女孩撒该被造假新闻并摘角膜
+    summary: 莱诺家族指使记者程走柳用镜头把诺族小女孩（以撒之妹撒该）造成布雷族圣女（虚假新闻），并指使眼科医生缪宏谟亲手摘其眼角膜制造异象；金狮医院大火中失明女孩浴火重生为圣女。
+    story_time: 2000
+    act: 第四幕
+    actors:
+      - {char: 莱诺家族, role: agent}
+      - {char: 程走柳, role: agent}
+      - {char: 缪宏谟, role: agent}
+      - {char: 撒该, role: patient}
+    facts: [F104, F132, F142, F702, F714, F720]
+    motive: 跨族挑动仇恨、维持伪善叙事
+    effect: 撒该被造成圣女后死于诺族人之手，成2000大屠杀借口；程走柳/缪宏谟由此背负罪孽
+
+  - id: E079
+    type: Event
+    title: 摘缪宏谟眼角膜（伯纳德逼迫）
+    summary: 缪宏谟摘小女孩眼角膜系伯纳德逼迫（抓小女孩逼其选择）；缪宏谟自身也被莱诺家族摘除角膜致盲（我看不到任何东西）。
+    story_time: 2000
+    act: 第五幕
+    actors:
+      - {char: 伯纳德·莱诺, role: agent}
+      - {char: 缪宏谟, role: patient}
+    facts: [F142, F719, F017]
+    motive: 伯纳德逼迫缪就范、并致其失明
+    effect: 缪宏谟失明、背负医疗罪与赎罪心结
+
+  - id: E080
+    type: Event
+    title: 2000中旬种族大屠杀（决定性，主口径）
+    summary: 2000年中旬莱诺家族+缪家共同挑起种族大屠杀：布雷族疯狂屠杀诺族；狂草帮为护平民几乎死光。圣女撒该惨死于诺族人手是正式开启的借口。
+    story_time: 2000中旬
+    act: 第四幕
+    actors:
+      - {char: 莱诺家族, role: agent}
+      - {char: 缪家, role: agent}
+      - {char: 布雷族, role: agent}
+      - {char: 诺族, role: patient}
+      - {char: 狂草帮, role: patient}
+    facts: [F105, F708]
+    motive: 制造决定性战争、谋取战争横财
+    effect: 死伤惨重，持续整个雨季；狂草帮几乎死光；激起怒河复仇
+
+  - id: E081
+    type: Decision
+    title: 程聿怀（延迟）与莱诺一起挑屠杀、最后放弃布雷族
+    summary: 2000年程聿怀（延迟）出于某种原因与莱诺家族一起挑起种族战争，战争最后放弃布雷族，致很多布雷族人死去；黛利拉家人朋友皆死于此。
+    story_time: 2000
+    act: 第七幕
+    actors:
+      - {char: 程聿怀, role: agent}
+      - {char: 莱诺家族, role: agent}
+      - {char: 布雷族, role: patient}
+      - {char: 黛利拉, role: patient}
+    facts: [F192, F123]
+    motive: 程变得像莱诺、无情保护壳（撕裂对世界的期待）
+    effect: 黛利拉家人朋友皆死；阿奇决意杀程；为阿奇之死埋线
+
+  - id: E082
+    type: Event
+    title: 摩伊拉死于金狮医院大火
+    summary: 2000年5月2日金狮医院大火中，黛利拉的姐姐妈妈摩伊拉被砍死（砍人者由蒋伯驾受控燃烧计划派出）。
+    story_time: 2000
+    act: 第四幕
+    actors:
+      - {char: 摩伊拉, role: patient}
+      - {char: 蒋伯驾, role: agent}
+      - {char: 黛利拉, role: witness}
+    facts: [F015]
+    motive: 受控燃烧计划牺牲外圈
+    effect: 黛利拉再失至亲；为黛逼问蒋伯驾埋线
+
+  - id: E083
+    type: Event
+    title: 以撒祖母为护以撒死在以撒手里
+    summary: 2000大屠杀开始后，以撒的祖母为把生的机会留给他，死在以撒手里。
+    story_time: 2000
+    act: 第四幕
+    actors:
+      - {char: 以撒祖母, role: patient}
+      - {char: 以撒, role: agent}
+    facts: [F016]
+    motive: 祖母舍命护孙
+    effect: 以撒创伤加深
+
+  - id: E084
+    type: Decision
+    title: 羌青瓷任奥丁心理医生，暗示并挑衅奥丁复仇
+    summary: 2000大屠杀后奥丁察觉莱诺脱不了干系；政府令幸存者做心理治疗，瑞法（羌青瓷）任奥丁医生并暗示屠杀是莱诺挑起，挑衅其复仇；瑞法与奥丁彻底对立。
+    story_time: 2000后
+    act: 第四幕
+    actors:
+      - {char: 羌青瓷, role: agent}
+      - {char: 奥丁, role: patient}
+    facts: [F181]
+    motive: 既是莱诺代表，又暗中把矛头引向家族（为最终献祭芯片埋线）
+    effect: 奥丁与莱诺彻底对立；为怒河复仇埋线
+
+  # ============ 2000后—2001 怒河组建 ============
+  - id: E090
+    type: Decision
+    title: 程走柳+缪宏谟创建复仇组织怒河
+    summary: 大屠杀一年后（约2001）程走柳、缪宏谟找奥丁，提供军火钱财组建正规复仇组织怒河，目标杀死2000大屠杀所有操纵者（含莱诺家族）；二人隐居幕后为真创始人。
+    story_time: 约2001
+    act: 第五幕
+    actors:
+      - {char: 程走柳, role: agent}
+      - {char: 缪宏谟, role: agent}
+      - {char: 奥丁, role: agent}
+      - {char: 怒河, role: beneficiary}
+    facts: [F130, F141, F182]
+    motive: 赎罪（曾被莱诺威逼害无辜）+ 复仇
+    effect: 怒河成立；奥丁任表面指挥官，以撒/黛利拉为杀手
+
+  - id: E091
+    type: Decision
+    title: 奥丁出任怒河表面指挥官并暗中保全程缪
+    summary: 程走柳、缪宏谟因曾被莱诺威逼害无辜而罪孽深重，欲杀光凶手后自尽；奥丁同意任怒河表面指挥官，并暗中给她们安排自然老死的死法。
+    story_time: 约2001
+    act: 第五幕
+    actors:
+      - {char: 奥丁, role: agent}
+      - {char: 程走柳, role: patient}
+      - {char: 缪宏谟, role: patient}
+    facts: [F182, F131]
+    motive: 不忍二人寻死、收容受苦之人
+    effect: 奥丁成怒河门面；程缪寻死之愿被暗中化解
+
+  - id: E092
+    type: Event
+    title: 以撒、黛利拉成为怒河杀手
+    summary: 以撒、黛利拉成为怒河杀手执行刺杀；以撒受瑞法指使杀莱诺成员，黛利拉受伯纳德指使杀电台台长（这些加害同时也是日后认罪自污素材）。
+    story_time: 约2001后
+    act: 第七幕
+    actors:
+      - {char: 以撒, role: agent}
+      - {char: 黛利拉, role: agent}
+      - {char: 怒河, role: beneficiary}
+    facts: [F163, F172, F710, F716]
+    motive: 复仇
+    effect: 二人成怒河王牌杀手/情报官
+
+  - id: E093
+    type: Decision
+    title: 卢特·莱诺娶程走柳（伯纳德幕后控制延迟）
+    summary: 羌青瓷叔叔卢特·莱诺（年近六十）娶程走柳，并收蒋伯驾为义子；其婚事幕后动机来自伯纳德——伯纳德一直知道程走柳是程聿怀之妹，为控制延迟而要把程的妹妹留在莱诺家族身边。
+    story_time: 约2001后
+    act: 第五幕
+    actors:
+      - {char: 卢特·莱诺, role: agent}
+      - {char: 程走柳, role: patient}
+      - {char: 伯纳德·莱诺, role: agent}
+      - {char: 蒋伯驾, role: patient}
+    facts: [F202]
+    motive: 以亲属为人质控制延迟
+    effect: 程走柳潜入莱诺家族身边；卢特收蒋伯驾义子（奥丁起哄蒋改口称程走柳婶/母）
+
+  # ============ 加害链补：莱诺家族指使的具体加害 ============
+  - id: E094
+    type: Decision
+    title: 羌青瓷指使以撒刺杀莱诺家族成员
+    summary: 瑞法（羌青瓷）指使以撒刺杀莱诺家族成员（多为家主竞争对手），以清除竞争者、爬上家主之位（最终为把芯片献祭程聿怀）。
+    story_time: 约2001后
+    act: 第七幕
+    actors:
+      - {char: 羌青瓷, role: agent}
+      - {char: 以撒, role: agent}
+      - {char: 莱诺家族成员, role: patient}
+    facts: [F114, F710, F712, F163]
+    motive: 清除竞争者、爬上家主之位
+    effect: 羌爬上家主位；以撒认罪瑞法是同谋
+
+  - id: E095
+    type: Decision
+    title: 伯纳德指使黛利拉杀诺族电台台长
+    summary: 伯纳德·莱诺指使黛利拉杀诺族电台台长。
+    story_time: 约2001后
+    act: 第七幕
+    actors:
+      - {char: 伯纳德·莱诺, role: agent}
+      - {char: 黛利拉, role: agent}
+      - {char: 诺族电台台长, role: patient}
+    facts: [F703, F716, F172]
+    motive: 跨族挑动仇恨/清除障碍
+    effect: 黛利拉认罪伯纳德是同谋
+
+  # ============ 2003 阿奇之死 / 黛利拉发病 ============
+  - id: E100
+    type: Event
+    title: 阿奇遇黛利拉重获生活
+    summary: 阿奇始终不能公开露面、成无人知晓的英雄、只为延迟挡子弹，陷入巨大寂寞恐惧；直到遇见黛利拉，黛像锤头敲碎他沉闷山壁让光闯进来，让他重获生活乐趣。
+    story_time: 约2001–2002
+    act: null
+    actors:
+      - {char: 阿奇, role: patient}
+      - {char: 黛利拉, role: agent}
+    facts: [F191, F018]
+    motive: 
+    effect: 二人相爱（cp）；为阿奇之死的悲剧反差埋线
+
+  - id: E101
+    type: Decision
+    title: 阿奇为大义未杀程聿怀
+    summary: 为给黛利拉和布雷族报仇，阿奇去杀程聿怀；但刀架在程脖子上时，想到日后战争再起仍需延迟平乱、只有程那一半能平息战争，于是绝望地拿开刀离开（为爱拿起刀，为大义却落不下刀）。
+    story_time: 约2000–2003
+    act: null
+    actors:
+      - {char: 阿奇, role: agent}
+      - {char: 程聿怀, role: patient}
+    facts: [F192]
+    motive: 为爱复仇 vs 为大义留延迟
+    effect: 阿奇未杀程，自身陷入对黛利拉的愧疚无法承担
+
+  - id: E102
+    type: Decision
+    title: 黛利拉受怒河指派杀延迟=亲手杀阿奇
+    summary: 2003年黛利拉告诉阿奇她成怒河杀手、任务是杀延迟；阿奇带她看世界最好风景、告知全部秘密（含自己是二分之一延迟）；黛震惊愤怒却不想杀他，最终因不忍其痛苦而成全、亲手杀死阿奇（真阿奇死）。
+    story_time: 2003
+    act: 第五幕
+    actors:
+      - {char: 黛利拉, role: agent}
+      - {char: 阿奇, role: patient}
+      - {char: 怒河, role: agent}
+    facts: [F192, F173, F020]
+    motive: 怒河任务 + 成全阿奇解脱（为爱可做任何事，包括杀爱人）
+    effect: 真阿奇死；黛利拉随后解离障碍发作
+
+  - id: E103
+    type: Event
+    title: 黛利拉解离障碍发作，幻想出假阿奇
+    summary: 2003年后黛利拉解离性障碍/多重人格发作，幻想出阿奇人格日日陪伴；只记得杀了延迟不记得是阿奇；奥丁带其治疗无效。第五幕后出场的阿奇全是假阿奇。
+    story_time: 2003后
+    act: 第五幕
+    actors:
+      - {char: 黛利拉, role: patient}
+      - {char: 假阿奇, role: agent}
+      - {char: 奥丁, role: witness}
+    facts: [F173, F028]
+    motive: 痛苦郁积冲垮精神堤坝、选择性遗忘篡改记忆
+    effect: 假阿奇陪伴；为结局假阿奇助黛自爱埋线
+
+  - id: E104
+    type: Event
+    title: 以撒成长——目睹缪宏谟被戴戒指而觉醒爱是让对方自由
+    summary: 以撒目睹缪宏谟未婚夫给缪戴戒指、缪痛苦表情那一刻，明白自己与缪需求对冲（缪渴望自由、以撒渴望束缚），若我行我素便与束缚缪的男人无异，遂转变为尊重自由本身——爱是让对方自由（爱格塑造人格）。
+    story_time: 约2000–2004
+    act: 第三幕
+    actors:
+      - {char: 以撒, role: patient}
+      - {char: 缪宏谟, role: witness}
+    facts: [F162, F058]
+    motive: 对爱的领悟反向塑造人格
+    effect: 以撒转变成更尊重自由、给缪更多选择权
+
+  # ============ 2005 清算 / 倾覆 / 结局 ============
+  - id: E110
+    type: Decision
+    title: 羌青瓷绑架主角众人、挑拨离间（戏中戏）
+    summary: 2005年羌青瓷绑架主角所有人、在他们之间挑拨离间（假借绑架名义聚人于仓库/金狮医院、借挑事解开误会促合作）；奥丁及时赶到救下众人。
+    story_time: 2005
+    act: 第五幕
+    actors:
+      - {char: 羌青瓷, role: agent}
+      - {char: 主角众人, role: patient}
+      - {char: 奥丁, role: agent}
+    facts: [F182, F114]
+    motive: 暗中助程聿怀等揭穿家族、聚力复仇
+    effect: 奥丁救场、带领众人明确向莱诺家族复仇
+
+  - id: E111
+    type: Decision
+    title: 奥丁带领众人明确向莱诺家族复仇
+    summary: 奥丁及时赶到救下众人，发表合谋演讲、逐人劝说（以撒/蒋伯驾/程聿怀），主张唯有凝聚所有人之力方能推翻莱诺家族，促成5月布雷诺大屠杀五周年纪念仪式的复仇合谋。
+    story_time: 2005
+    act: 第五幕
+    actors:
+      - {char: 奥丁, role: agent}
+      - {char: 主角众人, role: beneficiary}
+    facts: [F182, F183]
+    motive: 凝聚所有人之力推翻莱诺家族整体
+    effect: 复仇合谋成形；指向2005纪念会清算
+
+  - id: E112
+    type: Reveal
+    title: 蒋伯驾自爆卧底身份、带头抛证据
+    summary: 第七幕认罪现场，潜伏莱诺家族多年的卧底记者蒋伯驾最终自爆身份，宣告莱诺家族主业是用舆论挑起战争发战争财，带头拿出证据、邀众人向全世界宣告莱诺罪行。
+    story_time: 2005
+    act: 第七幕
+    actors:
+      - {char: 蒋伯驾, role: agent}
+      - {char: 莱诺家族, role: patient}
+    facts: [F150, F705, F704]
+    motive: 揭露莱诺家族真面目
+    effect: 开启全员检举认罪
+
+  - id: E113
+    type: Reveal
+    title: 第七幕全员当众认罪、曝光莱诺六大罪
+    summary: 2005纪念会第七幕，六名玩家（黛利拉/以撒/缪宏谟/程走柳/程聿怀/蒋伯驾）当众自污认罪、抛罪证、放录音笔人证音频，逐一逼迫羌青瓷认罪，曝光莱诺家族六大罪：种族灭绝/虚假新闻/医疗/谋杀/战争/非法贩卖武器。
+    story_time: 2005
+    act: 第七幕
+    actors:
+      - {char: 黛利拉, role: agent}
+      - {char: 以撒, role: agent}
+      - {char: 缪宏谟, role: agent}
+      - {char: 程走柳, role: agent}
+      - {char: 程聿怀, role: agent}
+      - {char: 蒋伯驾, role: agent}
+      - {char: 羌青瓷, role: patient}
+    facts: [F106, F700, F701, F702, F703, F704, F705, F706, F707]
+    motive: 以自污自焚（受控燃烧）向世界曝光莱诺罪证
+    effect: 莱诺家族六大罪被钉死、当众输了
+
+  - id: E114
+    type: Outcome
+    title: 羌青瓷被取出心脏芯片而死（献祭完成）
+    summary: 2005年在羌青瓷帮助下程聿怀等揭穿莱诺家族；程聿怀狠心让人取出羌心脏芯片（家族全部罪证），羌青瓷因此死亡（鲨鱼手环+火柴疗法两个死亡演绎）；临终回归温柔像卸下面具。
+    story_time: 2005
+    act: 结局
+    actors:
+      - {char: 程聿怀, role: agent}
+      - {char: 羌青瓷, role: patient}
+      - {char: 众人, role: beneficiary}
+    facts: [F102, F115]
+    motive: 羌以死成全复仇（对程聿怀十五年的爱）；程取芯片掀翻家族
+    effect: 莱诺家族罪证大白、家族倾覆；羌死
+
+  - id: E115
+    type: Outcome
+    title: 奥丁与怒河守门全部牺牲（受控燃烧①）
+    summary: 2005纪念会上奥丁与怒河成员在大门口守着不让莱诺家族的人进来打扰，全部牺牲但守住大门；奥丁播放《生来奔跑》的耳机被子弹打穿，踏上无声之旅。
+    story_time: 2005
+    act: 结局
+    actors:
+      - {char: 奥丁, role: agent}
+      - {char: 怒河, role: agent}
+      - {char: 莱诺家族, role: patient}
+    facts: [F183, F201]
+    motive: 替众人守门、换内圈曝光罪证的时间
+    effect: 奥丁/怒河尽数牺牲；受控燃烧第一次
+
+  - id: E116
+    type: Outcome
+    title: 众人自污认罪、牺牲声誉性命换莱诺倾覆（受控燃烧②）
+    summary: 众人当众坦白所有罪行、接受惩罚、牺牲声誉与性命，换莱诺家族倾覆与世界看见真相（受控燃烧第二次）。
+    story_time: 2005
+    act: 结局
+    actors:
+      - {char: 主角众人, role: agent}
+      - {char: 莱诺家族, role: patient}
+    facts: [F201, F106]
+    motive: 受控燃烧——牺牲一些保存一些、让世界看见真相
+    effect: 莱诺家族倾覆；众人牺牲声誉与性命
+
+  - id: E117
+    type: Reveal
+    title: 程聿怀方知1990即与羌青瓷相爱
+    summary: 程聿怀在羌青瓷死后才知道他们从1990年就相爱了；羌青瓷爱程十五年却沉默十年。
+    story_time: 2005（羌死后）
+    act: 结局
+    actors:
+      - {char: 程聿怀, role: patient}
+      - {char: 羌青瓷, role: witness}
+    facts: [F112, F115]
+    motive: 
+    effect: 纯爱反转完全揭晓（全剧情感落点）
+
+  # ============ 结局演绎（剧场，2005之后/超现实落幕）============
+  - id: E120
+    type: Outcome
+    title: 假阿奇让黛利拉恢复记忆、学会自爱
+    summary: 全剧结束后，虚假的阿奇短暂占领黛利拉身体、给她下恢复记忆的药让她想起一切，并让黛利拉杀死自己（因心理医生说阿奇人格正影响黛生命健康）；假阿奇想离开是想让黛慢慢学会爱自己。阿奇演绎最后在镜上用红笔写home。
+    story_time: 2005之后
+    act: 结局
+    actors:
+      - {char: 假阿奇, role: agent}
+      - {char: 黛利拉, role: patient}
+    facts: [F174, F200]
+    motive: '这个世界上最永恒的爱是自爱——让黛学会自爱'
+    effect: 黛利拉恢复记忆、学会自爱；假阿奇消失
+
+  - id: E121
+    type: Outcome
+    title: 以撒为缪宏谟戴三枚戒指（花开蝴蝶归）
+    summary: 尾声缪宏谟为以撒讲三枚戒指（鲜花/羽毛/蝴蝶）结局，以撒为缪戴上三枚戒指——花重新开了，蝴蝶也回来了。
+    story_time: 2005之后
+    act: 结局
+    actors:
+      - {char: 缪宏谟, role: agent}
+      - {char: 以撒, role: agent}
+    facts: [F200, F053]
+    motive: 承诺/和解意象
+    effect: 以撒缪宏谟cp圆满意象（与以撒蝴蝶标本创伤呼应）

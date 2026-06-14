@@ -1,10 +1,16 @@
-import type { Graph } from "@liumang/shared";
+import type { Graph, StoryGraph } from "@liumang/shared";
 
 const BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:8787";
 
 export async function fetchGraph(): Promise<Graph> {
   const r = await fetch(`${BASE}/graph`);
   if (!r.ok) throw new Error(`graph ${r.status}`);
+  return r.json();
+}
+
+export async function fetchStory(): Promise<StoryGraph> {
+  const r = await fetch(`${BASE}/story`);
+  if (!r.ok) throw new Error(`story ${r.status}`);
   return r.json();
 }
 

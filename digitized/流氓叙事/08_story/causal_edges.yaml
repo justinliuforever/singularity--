@@ -1,0 +1,118 @@
+# 流氓叙事 · 因果边层（Causal Edges）
+# 忠实转录自 02_truth/阴谋网.md 的「加害链/复仇链/情感血缘网/动机—因果速记」，
+# 节点 id 对应 08_story/events.yaml。
+# type:
+#   causes      物理/事件因果（A 直接导致 B）
+#   motivates   动机驱动某行动（A 使某人产生做 B 的动机）
+#   enables     使能/前提（A 为 B 创造条件，但非唯一必要）
+#   reveals     线索或事件揭示了某真相
+#   depends_on  必要前提（B 必须先有 A）
+#   contradicts 口径冲突/矛盾
+# access: referee_only
+
+edges:
+
+  # —— 结构性背景：殖民→压迫→火药桶 ——
+  - {from: E002, to: E003, type: causes, note: 强行划分两族→布雷族长期被欺压}
+  - {from: E003, to: E040, type: enables, note: 长期族群裂痕使莱诺建电台挑争抢得以点火}
+  - {from: E001, to: E040, type: motivates, note: 家族靠战争卖军火发财基因→反复在布雷诺挑火}
+
+  # —— 加害链1：夏尔强娶黎梦鲸→瑞法畸形成长 ——
+  - {from: E011, to: E012, type: causes, note: 强娶囚禁黎梦鲸期间生下瑞法}
+  - {from: E011, to: E012, type: causes, note: 黎梦鲸心理扭曲→逼瑞法严酷训练}
+  - {from: E012, to: E030, type: enables, note: 瑞法只知什么不是爱→被程聿怀治愈相爱}
+
+  # —— 动机速记链②：夏尔强娶→瑞法不懂爱→被治愈→抹忆献祭→以死成全 ——
+  - {from: E030, to: E043, type: motivates, note: 因深爱程聿怀→为护其活命而抹忆}
+  - {from: E030, to: E049, type: motivates, note: 对程聿怀的爱→决意献祭芯片}
+  - {from: E049, to: E114, type: causes, note: 献祭芯片的长线决定→2005取芯片致羌死}
+  - {from: E114, to: E116, type: enables, note: 取出心脏芯片(家族全部罪证)→众人得以掀翻家族}
+
+  # —— 加害链2/挑火三连：电台(1995)→金狮医院(2000)→纪念会(2005) ——
+  - {from: E040, to: E045, type: causes, note: 建电台挑两族争抢→1995种族屠杀}
+  - {from: E070, to: E080, type: causes, note: 建金狮医院挑更大战争→2000中旬决定性大屠杀}
+  - {from: E040, to: E070, type: enables, note: 故技重施：电台得手→再建金狮医院挑火}
+  - {from: E080, to: E113, type: enables, note: 莱诺主导2000大屠杀→2005纪念会成清算现场}
+
+  # —— 1995 vs 2000 屠杀口径冲突（时间线疑点1/角色册6）——
+  - {from: E045, to: E080, type: contradicts, note: 口径冲突：阿奇/布雷诺资料称1995大屠杀vs奥丁主线称决定性大屠杀在2000中旬；可调和读法=两次不同屠杀}
+
+  # —— 加害链3：圣女骗局 ——
+  - {from: E001, to: E078, type: motivates, note: 跨族挑动仇恨/维持伪善叙事→指使造圣女}
+  - {from: E078, to: E080, type: causes, note: 圣女撒该惨死于诺族人手→正式开启2000大屠杀}
+  - {from: E079, to: E078, type: enables, note: 伯纳德逼缪宏谟摘角膜→人为制造圣女异象}
+  - {from: E078, to: E090, type: motivates, note: 程走柳/缪宏谟因被逼造圣女害无辜→罪孽感→创建怒河}
+
+  # —— 加害链4：害死程亮冬=复仇线导火索 ——
+  - {from: E001, to: E031, type: motivates, note: 灭口查到家族真相的记者→害死程亮冬}
+  - {from: E031, to: E033, type: causes, note: 父被害→程聿怀孤身赴布雷诺查真相}
+  - {from: E031, to: E032, type: causes, note: 家庭变故→程走柳假意吵架赶走兄长}
+  - {from: E033, to: E041, type: causes, note: 赴布雷诺查真相→从羌电脑发现莱诺真相}
+
+  # —— 加害链5：伯纳德欲杀程灭口→羌交易抹忆 ——
+  - {from: E041, to: E042, type: causes, note: 程发现真相被伯纳德察觉→伯纳德欲杀灭口}
+  - {from: E042, to: E043, type: causes, note: 羌与伯纳德交易→用火柴疗法抹除程记忆}
+  - {from: E043, to: E073, type: enables, note: 程失忆→2000在不记得过往下与羌结婚}
+  - {from: E043, to: E117, type: depends_on, note: 正因记忆被抹→程直到羌死后才知1990即相爱}
+
+  # —— 加害链6：卢特娶程走柳(伯纳德幕后控制延迟) ——
+  - {from: E033, to: E093, type: motivates, note: 伯纳德知走柳是延迟之妹→以人质控制延迟而令卢特娶之}
+
+  # —— 加害链7/8/9/10：莱诺指使的具体加害 ——
+  - {from: E095, to: E092, type: causes, note: 伯纳德指使黛利拉杀电台台长(怒河杀手加害=认罪素材)}
+  - {from: E094, to: E092, type: causes, note: 羌指使以撒刺杀莱诺成员(怒河杀手加害=认罪素材)}
+  - {from: E049, to: E094, type: motivates, note: 决意爬上家主位→指使以撒清除竞争对手}
+  - {from: E084, to: E090, type: motivates, note: 羌暗示屠杀是莱诺挑起挑衅奥丁→推动复仇组织成立}
+  - {from: E076, to: E080, type: enables, note: 蒋应瑞法提议雇佣兵在金狮医院屠杀→助推2000大屠杀}
+  - {from: E077, to: E116, type: enables, note: 蒋受控燃烧理念→最终推动众人清算(受控燃烧②)}
+
+  # —— 复仇链1/2：怒河成立 ——
+  - {from: E080, to: E090, type: motivates, note: 2000大屠杀(被莱诺威逼害无辜+复仇)→创建怒河}
+  - {from: E090, to: E091, type: causes, note: 程缪欲杀凶手后自尽→奥丁任表面指挥官并暗中保全}
+  - {from: E090, to: E092, type: enables, note: 怒河成立→以撒/黛利拉成为杀手}
+  - {from: E015, to: E016, type: motivates, note: 奥丁失去家人→组建狂草帮收容受苦之人}
+  - {from: E016, to: E091, type: enables, note: 奥丁的狂草帮根基→使其能出任怒河门面、收容众人}
+
+  # —— 复仇链3/4：延迟与卧底 ——
+  - {from: E045, to: E046, type: causes, note: 1995屠杀→程聿怀决意反抗、二次成为延迟}
+  - {from: E046, to: E047, type: causes, note: 延迟身份须隐藏+诺族欲刺杀→阿奇主动当替身}
+  - {from: E044, to: E047, type: enables, note: 程在电台结识阿奇→阿奇得以成为延迟替身}
+
+  # —— 复仇链5：蒋伯驾卧底揭露 ——
+  - {from: E076, to: E112, type: enables, note: 蒋表层参与屠杀积累罪证→最终自爆卧底带头抛证}
+  - {from: E112, to: E113, type: causes, note: 蒋带头自爆+抛证→引发全员检举认罪}
+
+  # —— 复仇链6：羌献祭自己 ——
+  - {from: E110, to: E111, type: causes, note: 羌绑架挑离间(戏中戏)→奥丁救场带众人明确复仇}
+  - {from: E111, to: E113, type: enables, note: 奥丁促成复仇合谋→2005纪念会全员认罪}
+  - {from: E110, to: E114, type: motivates, note: 羌暗中助揭穿家族→令程取自己芯片献祭}
+
+  # —— 复仇链7：2005清算/受控燃烧 ——
+  - {from: E113, to: E114, type: causes, note: 全员认罪曝光罪证→程取羌芯片、莱诺倾覆}
+  - {from: E115, to: E113, type: enables, note: 奥丁怒河守门(受控燃烧①)→换内圈众人曝光罪证的时间}
+  - {from: E113, to: E116, type: causes, note: 众人自污认罪→牺牲声誉性命换莱诺倾覆(受控燃烧②)}
+  - {from: E114, to: E117, type: reveals, note: 羌死→程方知1990即相爱(纯爱反转揭晓)}
+
+  # —— 情感网：阿奇×黛利拉时序演变（相爱→屠杀→手刃→解离→自爱）——
+  - {from: E081, to: E101, type: motivates, note: 程放弃布雷族致黛家人死→阿奇决意为黛复仇去杀程}
+  - {from: E101, to: E102, type: enables, note: 阿奇未杀程、自陷愧疚→无法承担、最终求黛成全}
+  - {from: E100, to: E102, type: enables, note: 阿奇与黛相爱→黛在知全部秘密后仍亲手成全其解脱}
+  - {from: E102, to: E103, type: causes, note: 黛亲手杀阿奇→解离障碍发作、幻想假阿奇}
+  - {from: E103, to: E120, type: enables, note: 假阿奇人格陪伴→结局假阿奇助黛恢复记忆学会自爱}
+
+  # —— 情感网：以撒×缪宏谟（束缚→自由→圆满）——
+  - {from: E021, to: E104, type: enables, note: 以撒缺爱/占有欲→目睹缪被戴戒指而觉醒爱是让对方自由}
+  - {from: E104, to: E121, type: enables, note: 以撒转变尊重自由→结局为缪戴戒指、花开蝴蝶归}
+  - {from: E079, to: E104, type: enables, note: 缪被(伯纳德等)束缚联姻→以撒由此领悟二人需求对冲}
+
+  # —— 速记链①：莱诺贪战争财→挑火→害无辜→激怒河→2005清算倾覆 ——
+  - {from: E031, to: E090, type: causes, note: 害无辜(程父等)累积→激起怒河复仇}
+  - {from: E090, to: E116, type: causes, note: 怒河复仇→2005清算→莱诺倾覆}
+
+  # —— 速记链③：程聿怀失父+被抹忆→二次成延迟→像莱诺→终清算→死后方知相爱 ——
+  - {from: E033, to: E046, type: causes, note: 失父查真相→二次成为延迟}
+  - {from: E043, to: E081, type: enables, note: 被抹忆失记忆+创伤→变得像莱诺参与挑屠杀}
+  - {from: E072, to: E081, type: motivates, note: 伯纳德误判程变像莱诺并邀合作→程参与策划大屠杀}
+
+  # —— 速记链⑤：黛利拉缺爱→渴求爱→杀爱人→解离→学自爱 ——
+  - {from: E020, to: E100, type: enables, note: 战争之子缺爱→渴求爱→遇阿奇重获生活}

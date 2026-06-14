@@ -66,3 +66,46 @@ export const Graph = z.object({
   edges: z.array(GraphEdge),
 });
 export type Graph = z.infer<typeof Graph>;
+
+/* ─────────────── 创作画布：故事图（事件因果层） ─────────────── */
+
+/** 事件参与者：char + 角色定位 */
+export const StoryActor = z.object({
+  char: z.string(),
+  role: z.string().default("agent"), // agent/patient/witness/beneficiary
+});
+export type StoryActor = z.infer<typeof StoryActor>;
+
+/** 事件节点（fabula 客观事件层） */
+export const StoryEvent = z.object({
+  id: z.string(),
+  type: z.string(), // Event/Decision/Lie/Reveal/RelationChange/Outcome/Perception/Goal
+  title: z.string(),
+  summary: z.string().default(""),
+  storyTime: z.string().default(""), // 客观时间(可排序字符串)
+  act: z.string().nullable().default(null), // 在哪一幕揭示给全场（幕名）
+  actOrd: z.number().nullable().default(null), // 幕序（X 轴用）；null=纯背景
+  actors: z.array(StoryActor).default([]),
+  facts: z.array(z.string()).default([]),
+  motive: z.string().default(""),
+  effect: z.string().default(""),
+});
+export type StoryEvent = z.infer<typeof StoryEvent>;
+
+/** 因果/叙事边 */
+export const StoryEdge = z.object({
+  from: z.string(),
+  to: z.string(),
+  type: z.string(), // causes/motivates/enables/reveals/depends_on/contradicts
+  note: z.string().default(""),
+});
+export type StoryEdge = z.infer<typeof StoryEdge>;
+
+export const StoryGraph = z.object({
+  events: z.array(StoryEvent),
+  edges: z.array(StoryEdge),
+  /** 出现在事件里的角色（含 NPC），按事件数降序——画布泳道候选 */
+  cast: z.array(z.object({ char: z.string(), count: z.number(), isPC: z.boolean() })).default([]),
+  acts: z.array(ActMeta).default([]),
+});
+export type StoryGraph = z.infer<typeof StoryGraph>;

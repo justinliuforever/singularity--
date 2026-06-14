@@ -1,22 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clapperboard, LogIn, MousePointerClick } from "lucide-react";
-import { sliceGraph, type Graph, type GraphNode } from "@liumang/shared";
-import { fetchGraph } from "./lib/api";
+import { Clapperboard, LogIn, MousePointerClick, Loader2 } from "lucide-react";
+import { sliceGraph, type Graph, type StoryGraph } from "@liumang/shared";
+import { fetchGraph, fetchStory } from "./lib/api";
 import { useUI } from "./store";
-import MatrixLens from "./components/MatrixLens";
 import RelationLens from "./components/RelationLens";
+import StoryCanvas from "./components/StoryCanvas";
+import StoryDetail from "./components/StoryDetail";
+import EventDetail from "./components/EventDetail";
 import ActScrubber from "./components/ActScrubber";
 import TopBar from "./components/TopBar";
 import Dossier from "./components/Dossier";
-import NodeDetail from "./components/NodeDetail";
 import ActDossier from "./components/ActDossier";
 import TensionCurve from "./components/TensionCurve";
 
 export default function App() {
   const [graph, setGraph] = useState<Graph | null>(null);
+  const [story, setStory] = useState<StoryGraph | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [actOpen, setActOpen] = useState(false);
-  const { mode, act, perspective, selFact, filter, order, onlyTimed, set, enterChar, pickFact } = useUI();
+  const { mode, act, perspective, selEvent, detailStack, set, enterChar } = useUI();
+  const detail = detailStack[detailStack.length - 1] ?? null;
 
   useEffect(() => {
     fetchGraph()
@@ -26,11 +29,11 @@ export default function App() {
         if (third) set({ act: third.ord });
       })
       .catch((e) => setErr(String(e.message ?? e)));
+    fetchStory().then(setStory).catch(() => {});
   }, [set]);
 
   const slice = useMemo(() => (graph ? sliceGraph(graph, act, perspective) : null), [graph, act, perspective]);
   const curActName = useMemo(() => graph?.meta.acts.find((a) => a.ord === act)?.name ?? `第${act}幕`, [graph, act]);
-  const selNode: GraphNode | null = useMemo(() => (selFact && graph ? graph.nodes.find((n) => n.id === selFact) ?? null : null), [selFact, graph]);
   const portraitOf = (name: string) => graph?.nodes.find((n) => n.id === name)?.image ?? null;
 
   if (err)
@@ -52,7 +55,7 @@ export default function App() {
       <div className="flex min-h-0 flex-1">
         {/* 主舞台 */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* 工具条（独立一行，不压视图）：本幕 DM 流程 + 上帝模式的矩阵控件 */}
+          {/* 工具条 */}
           <div className="flex items-center gap-2 border-b border-ink-700 bg-ink-900/60 px-4 py-1.5">
             <button
               onClick={() => setActOpen(true)}
@@ -60,28 +63,30 @@ export default function App() {
             >
               <Clapperboard size={13} /> 本幕 DM 流程
             </button>
-            {mode === "scene" && <span className="text-[10px] text-zinc-600">点关系网里的人 → 进入 TA 的视角</span>}
-            {mode === "god" && (
-              <div className="flex items-center gap-2">
-                <Seg opts={[["all", "全部"], ["shared", "共享"], ["false", "只看假信念"]]} value={filter} onChange={(v) => set({ filter: v as any })} />
-                <Seg opts={[["act", "按幕"], ["camp", "按阵营"]]} value={order} onChange={(v) => set({ order: v as any })} />
-                <button
-                  onClick={() => set({ onlyTimed: !onlyTimed })}
-                  className={`rounded-md border px-2 py-1 text-[10px] transition-colors ${onlyTimed ? "border-accent/60 bg-accent/15 text-accent-soft" : "border-ink-700 text-zinc-400 hover:text-zinc-200"}`}
-                >
-                  仅定时
-                </button>
-              </div>
+            {mode === "scene" ? (
+              <span className="text-[10px] text-zinc-600">点关系网里的人 → 进入 TA 的视角</span>
+            ) : (
+              <span className="text-[10px] text-zinc-600">创作画布 · 每行一个角色、每列一幕 · 卡片=事件 · 连线=因果 · 点角色泳道聚焦 TA 的主线 · 点事件看因果</span>
             )}
           </div>
 
           <div className="relative min-h-0 flex-1">
-            {mode === "scene" ? <RelationLens graph={graph} /> : <MatrixLens graph={graph} />}
+            {mode === "scene" ? (
+              <RelationLens graph={graph} />
+            ) : story ? (
+              detail ? (
+                <StoryDetail story={story} portraitOf={portraitOf} />
+              ) : (
+                <StoryCanvas story={story} portraitOf={portraitOf} />
+              )
+            ) : (
+              <div className="grid h-full place-items-center text-zinc-500"><div className="flex items-center gap-2 text-sm"><Loader2 size={15} className="animate-spin" />编织故事图…</div></div>
+            )}
             {actOpen && <ActDossier ord={act} name={curActName} onClose={() => setActOpen(false)} />}
           </div>
         </div>
 
-        {/* 右栏：现场=认知卡/审问 · 上帝=事实详情/总览 */}
+        {/* 右栏 */}
         <aside className="flex w-[384px] shrink-0 flex-col border-l border-ink-700 bg-ink-900">
           {mode === "scene" ? (
             perspective !== "god" ? (
@@ -89,28 +94,15 @@ export default function App() {
             ) : (
               <ScenePanel graph={graph} onEnter={enterChar} />
             )
-          ) : selNode ? (
-            <NodeDetail graph={graph} node={selNode} onClose={() => pickFact(null)} />
+          ) : selEvent && story ? (
+            <EventDetail story={story} eventId={selEvent} />
           ) : (
-            <GodPanel graph={graph} act={act} />
+            <GodPanel graph={graph} act={act} story={story} />
           )}
         </aside>
       </div>
 
-      {/* 底部统一幕轴 */}
       <ActScrubber graph={graph} />
-    </div>
-  );
-}
-
-function Seg({ opts, value, onChange }: { opts: [string, string][]; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex overflow-hidden rounded-md border border-ink-700">
-      {opts.map(([v, t]) => (
-        <button key={v} onClick={() => onChange(v)} className={`px-2 py-1 text-[10px] transition-colors ${value === v ? "bg-ink-700 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"}`}>
-          {t}
-        </button>
-      ))}
     </div>
   );
 }
@@ -152,20 +144,26 @@ function ScenePanel({ graph, onEnter }: { graph: Graph; onEnter: (p: string) => 
   );
 }
 
-/** 上帝模式·未选事实时的总览面板 */
-function GodPanel({ graph, act }: { graph: Graph; act: number }) {
+/** 上帝模式·未选事件时的总览面板 */
+function GodPanel({ graph, act, story }: { graph: Graph; act: number; story: StoryGraph | null }) {
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       <div className="border-b border-ink-700 px-4 py-3 text-[10px] text-zinc-500">
-        <div className="mb-1.5 font-medium text-zinc-400">怎么读这张认知矩阵</div>
+        <div className="mb-1.5 font-medium text-zinc-400">创作画布 · 怎么读</div>
         <p className="leading-relaxed">
-          每<b className="text-zinc-300">行</b>一个角色、每<b className="text-zinc-300">列</b>一条事实。
-          <span className="text-know">蓝✓</span>=知道、<span className="text-amber-300">金🔒</span>=知道且须隐瞒、
-          <span className="text-truthlie">红✗</span>=被骗、空=墙后不知。底部<span className="text-reveal">客观真相</span>行=全场可揭示的真相。
-          一眼看尽：谁被骗了什么、谁握着秘密、信息阵营如何分布。
+          每<b className="text-zinc-300">行</b>是一个角色（PC + 关键 NPC），每<b className="text-zinc-300">列</b>是一幕（最左是开局前的背景）。
+          每张<b className="text-zinc-300">卡片</b>是一个事件（颜色=类型：<span className="text-violet-300">决定</span>/<span className="text-rose-300">谎言</span>/<span className="text-emerald-300">揭露</span>…），<b className="text-zinc-300">连线</b>是因果（动机/导致/使能/<span className="text-rose-300">矛盾</span>）。
         </p>
-        <p className="mt-1.5 leading-relaxed text-zinc-600">点格子看详情 · 切「按阵营」让知识同盟聚成色块 · 拖底部幕轴看矩阵随剧情逐列点亮。</p>
+        <p className="mt-1.5 leading-relaxed text-zinc-600">点角色泳道 → 聚焦 TA 的主线 · 点事件 → 看它的因果上下游 · 沿因果链就能追"谁因为什么做了什么"。</p>
+        {story && (
+          <div className="mt-2 flex gap-3 text-[11px]">
+            <span className="text-zinc-400">事件 <b className="text-zinc-100">{story.events.length}</b></span>
+            <span className="text-zinc-400">因果边 <b className="text-zinc-100">{story.edges.length}</b></span>
+            <span className="text-zinc-400">角色 <b className="text-zinc-100">{story.cast.length}</b></span>
+          </div>
+        )}
       </div>
+      <div className="px-4 py-2 text-[10px] text-zinc-600">下一步将在此基础上做：改一处 → 引擎推演影响范围（神经激活动画）。</div>
       <TensionCurve graph={graph} act={act} />
     </div>
   );

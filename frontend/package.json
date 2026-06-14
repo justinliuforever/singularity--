@@ -10,6 +10,7 @@
   "dependencies": {
     "@liumang/shared": "workspace:*",
     "@xyflow/react": "^12.3.6",
+    "elkjs": "^0.11.1",
     "lucide-react": "^0.468.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
