@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { X, ArrowRight, ArrowLeft, Network, Crosshair } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Network, Crosshair, Zap, Search } from "lucide-react";
 import type { StoryGraph } from "@liumang/shared";
 import { useUI } from "../store";
 
@@ -10,7 +10,7 @@ const EDGE_LABEL: Record<string, string> = {
   causes: "导致", motivates: "驱动动机", enables: "使能", reveals: "揭示", depends_on: "依赖", contradicts: "矛盾于",
 };
 
-export default function EventDetail({ story, eventId }: { story: StoryGraph; eventId: string }) {
+export default function EventDetail({ story, eventId, anchorId = null }: { story: StoryGraph; eventId: string; anchorId?: string | null }) {
   const { pickEvent, openDetail } = useUI();
   const e = story.events.find((x) => x.id === eventId);
 
@@ -41,12 +41,24 @@ export default function EventDetail({ story, eventId }: { story: StoryGraph; eve
         <div className="text-[14px] font-semibold leading-snug text-zinc-100">{e.title}</div>
         {e.summary && <div className="leading-relaxed text-zinc-300">{e.summary}</div>}
 
-        <button
-          onClick={() => openDetail("event", e.id)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 py-1.5 text-[11px] text-accent-soft transition-colors hover:bg-accent/20"
-        >
-          <Network size={13} /> 展开此事件的因果邻域（跨角色）
-        </button>
+        {anchorId === null ? (
+          <div className="rounded-lg border border-ink-700 bg-ink-850 px-2.5 py-2 text-[10px] leading-relaxed text-zinc-500">
+            <b className="text-zinc-300">双击</b>此事件 → 展开因果详图（前因 / 后果 / 推演 / 溯源）
+          </div>
+        ) : eventId === anchorId ? (
+          <div className="rounded-lg border border-accent/30 bg-accent/5 px-2.5 py-2 text-[10px] leading-relaxed text-accent-soft">
+            本图<b>焦点</b> · 用左上工具条切换 因果邻域 / 推演下游 / 溯源上游
+          </div>
+        ) : (
+          <div>
+            <div className="mb-1 text-[10px] text-zinc-500">以此节点为新焦点展开：</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button onClick={() => openDetail("event", e.id, "explore")} className="flex items-center justify-center gap-1 rounded-lg border border-ink-700 bg-ink-850 py-1.5 text-[10px] text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"><Network size={12} /> 因果邻域</button>
+              <button onClick={() => openDetail("event", e.id, "blast")} className="flex items-center justify-center gap-1 rounded-lg border border-accent/40 bg-accent/10 py-1.5 text-[10px] text-accent-soft transition-colors hover:bg-accent/20"><Zap size={12} /> 推演下游</button>
+              <button onClick={() => openDetail("event", e.id, "trace")} className="flex items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-400/10 py-1.5 text-[10px] text-amber-200 transition-colors hover:bg-amber-400/20"><Search size={12} /> 溯源上游</button>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-1.5">
           {e.actors.map((a) => (

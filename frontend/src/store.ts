@@ -6,6 +6,10 @@ export type Mode = "scene" | "god";
 export type ColFilter = "all" | "shared" | "false";
 /** 矩阵列排序（上帝模式） */
 export type ColOrder = "act" | "camp";
+/** L2 钻取详图类型：角色故事线 / 事件详图 / 幕因果切面 */
+export type DetailKind = "char" | "event" | "act";
+/** 事件详图模式：探索邻域 / 推演下游(blast) / 溯源上游(trace) */
+export type EventMode = "explore" | "blast" | "trace";
 
 /**
  * 单一选择总线（brushing & linking）：关系网/矩阵/认知卡/幕轴 共享一份。
@@ -31,15 +35,22 @@ interface UIState {
   /** 创作画布：选中/悬停的事件 */
   selEvent: string | null;
   hoverEvent: string | null;
+  /** 事件详图：模式 + 探索深度(跳数) */
+  eventMode: EventMode;
+  eventDepth: number;
+  /** P2 影响推演：当前点亮到第几波（-1=未推演） */
+  propLevel: number;
 
   /** L2 聚焦详图导航栈（空=L1总览，栈顶=当前详图）——支持面包屑/返回上一步 */
-  detailStack: { kind: "char" | "event" | "act"; id: string }[];
+  detailStack: { kind: DetailKind; id: string }[];
 
   set: (p: Partial<UIState>) => void;
   pickFact: (id: string | null) => void;
   pickEvent: (id: string | null) => void;
-  /** 钻入（压栈，跳过与栈顶重复） */
-  openDetail: (kind: "char" | "event" | "act", id: string) => void;
+  /** 钻入（压栈，跳过与栈顶重复）。进事件可带初始模式(推演/溯源) */
+  openDetail: (kind: DetailKind, id: string, mode?: EventMode) => void;
+  setEventMode: (m: EventMode) => void;
+  setEventDepth: (d: number) => void;
   /** 返回上一步（弹栈一层） */
   backDetail: () => void;
   /** 跳到面包屑第 i 步（-1=回总览） */
@@ -64,17 +75,26 @@ export const useUI = create<UIState>((set) => ({
   hoverChar: null,
   selEvent: null,
   hoverEvent: null,
+  eventMode: "explore",
+  eventDepth: 1,
+  propLevel: -1,
   detailStack: [],
 
   set: (p) => set(p),
   pickFact: (id) => set((s) => ({ selFact: s.selFact === id ? null : id })),
   pickEvent: (id) => set((s) => ({ selEvent: s.selEvent === id ? null : id })),
-  openDetail: (kind, id) =>
+  openDetail: (kind, id, mode) =>
     set((s) => {
       const top = s.detailStack[s.detailStack.length - 1];
       const dup = top && top.kind === kind && top.id === id;
-      return { detailStack: dup ? s.detailStack : [...s.detailStack, { kind, id }], selEvent: kind === "event" ? id : null };
+      return {
+        detailStack: dup ? s.detailStack : [...s.detailStack, { kind, id }],
+        selEvent: kind === "event" ? id : null,
+        ...(kind === "event" ? { eventMode: mode ?? "explore", eventDepth: 1 } : {}),
+      };
     }),
+  setEventMode: (m) => set({ eventMode: m }),
+  setEventDepth: (d) => set({ eventDepth: d }),
   backDetail: () => set((s) => ({ detailStack: s.detailStack.slice(0, -1) })),
   jumpDetail: (i) => set((s) => ({ detailStack: i < 0 ? [] : s.detailStack.slice(0, i + 1) })),
   closeDetail: () => set({ detailStack: [] }),

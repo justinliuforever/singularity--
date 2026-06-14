@@ -95,7 +95,7 @@ export default function App() {
               <ScenePanel graph={graph} onEnter={enterChar} />
             )
           ) : selEvent && story ? (
-            <EventDetail story={story} eventId={selEvent} />
+            <EventDetail story={story} eventId={selEvent} anchorId={detail?.kind === "event" ? detail.id : null} />
           ) : (
             <GodPanel graph={graph} act={act} story={story} />
           )}
