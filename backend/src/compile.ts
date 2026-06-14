@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Graph, type GraphNode, type GraphEdge } from "@liumang/shared";
+import { parseBeliefs, factIds } from "./kbparse.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -174,17 +175,13 @@ export function compileGraph(): Graph {
     const c = ensureChar(ch, charRole.get(ch) ?? "PC");
     const kTxt = read(path.join(charDir, ch, "knowledge.yaml"));
     if (kTxt) {
-      const beliefs = section(kTxt, "beliefs", ["secrets", "goals_by_act", "perceives_by_act", "relationship_beliefs"]);
-      for (const m of beliefs.matchAll(/-\s*fact:\s*([^\n]+)\n([\s\S]*?)(?=\n\s*-\s*fact:|$)/g)) {
-        const factLine = m[1];
-        const body = m[2];
-        const fids = factLine.match(/F\d{3,4}/g) ?? [];
-        const isFalse = /actually_true:\s*false/.test(body);
-        const stmt = (body.match(/statement:\s*([^\n]+)/)?.[1] ?? factLine).replace(/[>"]/g, "").trim().slice(0, 80);
-        if (fids.length === 0) continue; // 仅图谱化带 F-id 的信念
+      const bsec = section(kTxt, "beliefs", ["secrets", "goals_by_act", "perceives_by_act", "relationship_beliefs"]);
+      for (const b of parseBeliefs(bsec)) {
+        const fids = factIds(b.fact);
+        if (!fids.length) continue; // 仅图谱化带 F-id 的信念
         for (const fid of fids) {
-          noteFact(fid, stmt);
-          addEdge({ source: c, target: fid, kind: isFalse ? "BELIEVES_FALSELY" : "KNOWS", perspective: c, act: factAct.get(fid) ?? null });
+          noteFact(fid, b.statement.slice(0, 80));
+          addEdge({ source: c, target: fid, kind: b.isTrue ? "KNOWS" : "BELIEVES_FALSELY", perspective: c, act: factAct.get(fid) ?? null });
         }
       }
       const secrets = section(kTxt, "secrets", ["goals_by_act", "perceives_by_act", "relationship_beliefs"]);
@@ -213,6 +210,18 @@ export function compileGraph(): Graph {
     }
   }
 
+  // ---------- 表象 vs 真相（从 真相还原.md）----------
+  const factSurface = new Map<string, string>();
+  const factTruth = new Map<string, string>();
+  const truthMd = read(path.join(DIG, "02_truth", "真相还原.md"));
+  for (const m of truthMd.matchAll(/###\s*(F\d{3,4})\s*[—\-–][^\n]*\n([\s\S]*?)(?=\n###|\n##\s|$)/g)) {
+    const fid = m[1];
+    const s = m[2].match(/表象\*\*[（(]?[^）)]*[)）]?\*?\*?[：:]\s*([^\n]+)/)?.[1] || m[2].match(/表象[^：:]*[：:]\s*([^\n]+)/)?.[1];
+    const t = m[2].match(/真相\*\*[：:]\s*([^\n]+)/)?.[1] || m[2].match(/真相[^：:]*[：:]\s*([^\n]+)/)?.[1];
+    if (s) factSurface.set(fid, s.replace(/\*\*/g, "").trim());
+    if (t) factTruth.set(fid, t.replace(/\*\*/g, "").replace(/\[F\d+\]/g, "").trim());
+  }
+
   // ---------- 事实节点 ----------
   for (const fid of allFactIds) {
     const a = factAct.get(fid) ?? null;
@@ -222,6 +231,8 @@ export function compileGraph(): Graph {
       label: factDesc.get(fid) ?? fid,
       act: a,
       access: a == null ? "referee" : "public",
+      surface: factSurface.get(fid),
+      truth: factTruth.get(fid),
     });
   }
 

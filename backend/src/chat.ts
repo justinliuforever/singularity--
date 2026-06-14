@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseBeliefs } from "./kbparse.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -41,6 +42,8 @@ export interface KB {
   character: string;
   persona: string;
   beliefs: string[];
+  /** 假信念（她信以为真但其实错的）——审问命门之一 */
+  falseBeliefs: string[];
   relationships: string;
   secrets: { fact: string; reveal_if: string }[];
   actGoals: string;
@@ -56,14 +59,15 @@ export function loadKB(character: string, actName: string): KB {
 
   const beliefsSec = section(kTxt, "beliefs", ["secrets", "goals_by_act", "perceives_by_act", "relationship_beliefs"]);
   const beliefs: string[] = [];
+  const falseBeliefs: string[] = [];
   const forbiddenTruths: string[] = [];
-  for (const m of beliefsSec.matchAll(/-\s*fact:[^\n]*\n([\s\S]*?)(?=\n\s*-\s*fact:|$)/g)) {
-    const block = m[1];
-    const stmt = block.match(/statement:\s*([\s\S]*?)(?=\n\s*(?:actually_true|truth_ref|truth|note|weight):|$)/)?.[1] ?? "";
-    const clean = stripReferee(stmt);
-    if (clean) beliefs.push(clean.replace(/\s+/g, " ").trim());
-    const truth = block.match(/\btruth:\s*([\s\S]*?)(?=\n\s*(?:-\s*fact:|[a-z_]+:)|$)/)?.[1];
-    if (truth) forbiddenTruths.push(truth.replace(/\s+/g, " ").trim());
+  for (const b of parseBeliefs(beliefsSec)) {
+    const s = stripReferee(b.statement).replace(/\s+/g, " ").trim();
+    if (s) {
+      beliefs.push(s);
+      if (!b.isTrue) falseBeliefs.push(s);
+    }
+    if (b.truth) forbiddenTruths.push(b.truth);
   }
 
   const relationships = stripReferee(section(kTxt, "relationship_beliefs", ["goals_by_act", "perceives_by_act", "secrets"]));
@@ -83,7 +87,7 @@ export function loadKB(character: string, actName: string): KB {
   const gm = (kTxt + "\n" + gTxt).match(re);
   if (gm) actGoals = stripReferee(gm[1]).replace(/\s+/g, " ").trim();
 
-  return { character, persona, beliefs, relationships, secrets, actGoals, forbiddenTruths };
+  return { character, persona, beliefs, falseBeliefs, relationships, secrets, actGoals, forbiddenTruths };
 }
 
 function escapeRe(s: string) {
@@ -130,6 +134,93 @@ export function leakAudit(systemPrompt: string, kb: KB): { leaked: boolean; chec
     if (key && systemPrompt.includes(key)) hits.push(key);
   }
   return { leaked: hits.length > 0, checked: canaries.length + kb.forbiddenTruths.length, hits };
+}
+
+// —— 中文 2-gram 文本重叠（用于"依据/墙后"轻量判定，不依赖 NLP）——
+function cjkBigrams(s: string): Set<string> {
+  const c = (s.match(/[一-鿿]/g) || []).join("");
+  const g = new Set<string>();
+  for (let i = 0; i + 2 <= c.length; i++) g.add(c.slice(i, i + 2));
+  return g;
+}
+function overlap(a: string, b: string): number {
+  const A = cjkBigrams(a);
+  const B = cjkBigrams(b);
+  let n = 0;
+  for (const x of A) if (B.has(x)) n++;
+  return n;
+}
+
+export interface Grounding {
+  /** 这一问是否戳到了角色的隔离墙/秘密（她结构上答不上来、只能回避） */
+  pokesWall: boolean;
+  /** 回答可能依据的角色主观认知（短句，hedge 用） */
+  drewOn: string[];
+  knownFacts: number;
+  wallFacts: number;
+}
+
+/** 指控/逼问类线索词——表明这是一个在"撬"什么的问题 */
+const PROBE_CUE = /(杀|死|凶手|尸体|真凶|害死|下手|动机|不在场|是不是你|是你|你做|隐瞒|秘密|骗|撒谎|真相|到底|为什么|藏)/;
+
+/** 把一个回合（问 + 答）挂回知识图谱：戳没戳墙 + 可能依据了哪些认知 */
+export function analyzeTurn(question: string, reply: string, kb: KB): Grounding {
+  // 命门 = 秘密 + 假信念 + 裁判真相；"指控性问题 且 触及命门主题" → 戳到隔离墙
+  const sensitive = [...kb.secrets.map((s) => s.fact), ...kb.falseBeliefs, ...kb.forbiddenTruths];
+  const touches = sensitive.some((t) => overlap(question, t) >= 1);
+  const pokesWall = PROBE_CUE.test(question) && touches;
+  const drewOn = kb.beliefs
+    .map((b) => ({ b, s: overlap(reply, b) }))
+    .filter((x) => x.s >= 4)
+    .sort((a, z) => z.s - a.s)
+    .slice(0, 2)
+    .map((x) => (x.b.length > 30 ? x.b.slice(0, 30) + "…" : x.b));
+  return { pokesWall, drewOn, knownFacts: kb.beliefs.length, wallFacts: kb.forbiddenTruths.length };
+}
+
+/** 命门建议问题：按(角色,幕)从结构化模型生成审问问题，缓存 + 模板兜底 */
+const probeCache = new Map<string, string[]>();
+export async function probeQuestions(character: string, actName: string): Promise<string[]> {
+  const key = `${character}|${actName}`;
+  if (probeCache.has(key)) return probeCache.get(key)!;
+  const kb = loadKB(character, actName);
+  let qs = fallbackProbes(kb);
+  try {
+    if (process.env.DEEPSEEK_API_KEY) {
+      const pressure = [...kb.secrets.map((s) => s.fact), ...kb.forbiddenTruths].slice(0, 6).map((x) => `- ${x.slice(0, 60)}`).join("\n");
+      const sys = [
+        `你是一名资深剧本杀主持人，正在帮玩家设计"审问 ${character}"的犀利问题。`,
+        `【${character} 的公开人设】`,
+        kb.persona.slice(0, 600),
+        kb.relationships ? `【TA 眼中的关系】\n${kb.relationships.slice(0, 400)}` : "",
+        kb.actGoals ? `【TA 在「${actName}」的处境/目标】\n${kb.actGoals.slice(0, 400)}` : "",
+        pressure ? `【TA 在隐瞒或被蒙在鼓里的方向——仅供你判断"该往哪问"，绝对不可在问题里透露或暗示答案】\n${pressure}` : "",
+        ``,
+        `请写 4 个问题：像一个【一无所知】的审问者提出的、开放而犀利的试探，戳向 TA 可能隐瞒或在意的点，但绝不剧透答案。`,
+        `每行一个问题，共 4 行，每个 8~24 字，不要编号、不要解释、不要引号。`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      const out = await callDeepSeek(sys, [{ role: "user", content: `给我 4 个审问 ${character} 的问题。` }]);
+      const parsed = out
+        .split(/\n+/)
+        .map((l) => l.replace(/^[\s\-\d.、)）."'“”]+/, "").trim())
+        .filter((l) => l.length >= 6 && l.length <= 40)
+        .slice(0, 4);
+      if (parsed.length >= 3) qs = parsed;
+    }
+  } catch {
+    /* 用兜底 */
+  }
+  probeCache.set(key, qs);
+  return qs;
+}
+
+function fallbackProbes(kb: KB): string[] {
+  const out = ["案发当晚，你在哪里、和谁在一起？", "在场的人里，你最不信任谁？为什么？", "这一幕，你最不想让人知道的是什么？"];
+  if (kb.actGoals) out.push("你这一幕到底在图谋什么？");
+  else out.push("你确定你说的，就是全部的真相吗？");
+  return out.slice(0, 4);
 }
 
 export interface Msg {

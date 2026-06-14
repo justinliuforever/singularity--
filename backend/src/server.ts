@@ -7,7 +7,9 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Graph } from "@liumang/shared";
 import { compileGraph } from "./compile.js";
-import { loadKB, buildSystemPrompt, leakAudit, callDeepSeek, type Msg } from "./chat.js";
+import { loadKB, buildSystemPrompt, leakAudit, callDeepSeek, analyzeTurn, probeQuestions, type Msg } from "./chat.js";
+import { loadDossier, loadAct } from "./dossier.js";
+import { clueById } from "./clues.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv({ path: path.resolve(__dirname, "../../.env") });
@@ -36,10 +38,14 @@ app.post("/chat", async (c) => {
     const kb = loadKB(character, actName);
     const system = buildSystemPrompt(kb, actName);
     const audit = leakAudit(system, kb);
-    const reply = await callDeepSeek(system, body.messages || []);
+    const msgs = body.messages || [];
+    const reply = await callDeepSeek(system, msgs);
+    const lastQ = [...msgs].reverse().find((m) => m.role === "user")?.content ?? "";
+    const grounding = analyzeTurn(lastQ, reply, kb);
     return c.json({
       reply,
       audit,
+      grounding,
       kb: {
         beliefs: kb.beliefs.length,
         secrets: kb.secrets.length,
@@ -47,6 +53,40 @@ app.post("/chat", async (c) => {
         systemPromptChars: system.length,
       },
     });
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// 角色档案（可浏览：人设/弧线/本幕目标台词/认知/秘密/关系/本幕正文）
+app.get("/character/:name", (c) => {
+  try {
+    return c.json(loadDossier(c.req.param("name"), c.req.query("act") || "第三幕"));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// 命门建议问题（按角色×幕，模型生成+缓存）
+app.get("/probe/:name", async (c) => {
+  try {
+    const qs = await probeQuestions(c.req.param("name"), c.req.query("act") || "第三幕");
+    return c.json({ questions: qs });
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// 单条线索（含 OCR 真实卡面内容）
+app.get("/clue/:id", (c) => {
+  const clue = clueById(c.req.param("id"));
+  return clue ? c.json(clue) : c.json({ error: "not found" }, 404);
+});
+
+// 幕档案（DM 流程）
+app.get("/act/:ord", (c) => {
+  try {
+    return c.json(loadAct(Number(c.req.param("ord"))));
   } catch (e: any) {
     return c.json({ error: String(e?.message ?? e) }, 500);
   }

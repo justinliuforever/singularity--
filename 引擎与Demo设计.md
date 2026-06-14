@@ -1,14 +1,28 @@
 # 《流氓叙事》引擎与 Demo 设计文档
 
-> 状态：方向已对齐，待钉 v1 边界后开工。本文是 implement 时的主参照。
+> 状态：**Demo 已建成并跑通**（双模式 v4，2026-06）。本文 §1/§2 的理念是北极星；具体实现以 `README.md` + 下方「实现现状」为准。
 > 前置：本子已完整数字化（`digitized/流氓叙事/`，详见该目录与 `00_index/本体schema初稿.md`）。
-> 配套：早期方向讨论见根目录 `discussion.md`；本体字段见 `00_index/本体schema初稿.md`。
+> 配套：可视化/数据模型研究与 roadmap 见 `可视化研究与方案.md`；本体字段见 `00_index/本体schema初稿.md`。
 
 ---
 
 ## 0. 一句话
 
 我们建的是**一台引擎**：把一个剧本数字化成"**时序、多视角的知识图谱**"，在它之上长出两类产品——**创作侧（上帝视角：提炼框架/查逻辑/补血肉/可视化）** 与 **游玩侧（角色视角：演绎/对抗/被审问，结构性不泄密）**。二者是同一份图的两个**视图**，不是岔路。
+
+---
+
+## 0.5 实现现状（2026-06 · 双模式 v4）
+
+§1「一引擎两面」已**落地为界面的一级结构**——顶部「现场 ⇄ 上帝」切换 + 底部一根「幕」时间轴统驭一切：
+
+- **🎭 现场 · 入局（玩家·迷雾）**：关系网当主舞台（点人 = 成为 TA、进雾、ego 聚焦）；右栏**认知卡**=TA 本幕的 线索（含 OCR 真实卡面内容）/ 信念真伪 / 守秘 / 目标台词 / 审问对话（防泄漏 agent）。→ 对抗 agent 的 demo 面。
+- **🪄 上帝 · 创作（创作者·全知）**：**认知矩阵**当主台（行=PC×列=事实，四态：知/守秘/被骗/墙后 + 客观真相行；按阵营 seriation；只看假信念）。→ 帮作者查逻辑/可解性的 demo 面（漏洞检测为下一步）。
+- **底部幕轴**：滑到哪幕全部视图更新，并显示每幕「发牌密度」（揭示事实+发放线索）。
+
+**与本文早期设想的差异（重要）**：曾短暂把"认知矩阵"当成唯一 hero，经用户体验反馈否决——矩阵太抽象、不适合做玩家第一眼。结论：**矩阵是创作者的分析工具（归上帝模式），关系网才是玩家的直观入口（现场模式）**。研究依据与 roadmap 见 `可视化研究与方案.md`（其 §1「矩阵当主视图」结论已据此修订，§2 数据模型地基仍是后续主线）。
+
+运行/Demo 走法见 `README.md`。代码已实现：`shared/`(Zod+sliceGraph) · `backend/`(compile/chat/dossier/clues/server, Hono, **DeepSeek**) · `frontend/`(Vite+React19+React Flow+自绘 SVG 矩阵+Tailwind+Zustand)。
 
 ---
 
@@ -108,17 +122,17 @@
 仓库结构（pnpm workspaces monorepo）：
 
     repo/
-    ├── frontend/   Vite + React + React Flow + shadcn/ui   ← 纯 UI（图谱浏览器 + 对话框）
-    ├── backend/    Node + Hono + Vercel AI SDK            ← graph 编译/查询 + agent对话 + 导演裁判运行时
-    ├── shared/     Zod schema + TS 类型（图模型）          ← 前后端单一事实源
-    └── digitized/  数据（已有）
+    ├── frontend/   Vite + React 19 + React Flow + 自绘SVG矩阵 + Tailwind + Zustand   ← 纯 UI
+    ├── backend/    Node + Hono（compile/chat/dossier/clues/server）                  ← graph 编译/查询 + agent对话
+    ├── shared/     Zod schema + sliceGraph（图模型）                                  ← 前后端单一事实源
+    └── digitized/  数据（已有）+ _ocr（PDF OCR 文本，喂线索卡面内容）
 
-- **前端 = Vite + React**（不用 Next.js）：纯前端、前后端边界一眼分明；React Flow 渲染自定义节点卡 / 幕滑块 / 雾化（小图够用，Cytoscape 留给将来大图布局）；shadcn/ui 做界面。
-- **后端 = Node + Hono**：轻、TS 原生、随处部署；暴露 `GET /graph`（TS 解析 `digitized/`→图）、`POST /chat`（AI SDK→Anthropic）等；将来有状态多 agent session / websocket 直接往里加，不搬家。
+- **前端 = Vite + React 19**（不用 Next.js）：纯前端、前后端边界一眼分明；**关系网用 React Flow**、**认知矩阵自绘 SVG**（密集二部数据矩阵优于节点图，见 `可视化研究与方案.md` §0）；Tailwind 暗色风；Zustand 做跨视图选择总线（brushing/linking）。
+- **后端 = Node + Hono**：轻、TS 原生、随处部署；暴露 `GET /graph`、`GET /character/:name`、`GET /clue/:id`、`GET /act/:ord`、`POST /chat` 等；将来有状态多 agent session / websocket 直接往里加，不搬家。
+- **LLM = DeepSeek**（OpenAI 兼容端点，直接 fetch，未用 AI SDK）：`deepseek-chat`(flash) 默认、可切 `deepseek-reasoner`(pro)；key 在 `.env`（不入库）。当初设想的 Anthropic/AI SDK 未采用——直连更省依赖。
 - **共享 = Zod**：图 节点/边/`G(幕,视角)`/AgentState 的 schema 与类型，前后端共用、加载时校验。
 - **分层托管**：前端→**Vercel**；后端→**本地起步，长大后 Render / Azure**（账号已有）。
-- **数据库 = v1 零数据库**：`digitized/`→内存图，filter 出 `G(幕,视角)`。何时上图库(Neo4j/Kùzu)：多本子库 / 持久化多人 session / 服务端重图算法。向量库(pgvector)：仅当 agent 需对长正文做 RAG 时。
-- **LLM**：Anthropic（经 AI SDK）。本机暂无 `ANTHROPIC_API_KEY`；对话切片落地时配 key，或先用已登录的本机 `claude` CLI 兜底。
+- **数据库 = 零数据库**：`digitized/`→内存图，filter 出 `G(幕,视角)`。何时上图库(Neo4j/Kùzu)：多本子库 / 持久化多人 session / 服务端重图算法。向量库(pgvector)：仅当 agent 需对长正文做 RAG 时。
 
 > 决策依据：见根目录对话——"分离是代码结构决策、托管是另一回事"；脚手架由工具生成，分离的设置成本不落在用户身上，故选清晰分离 + 可成长，而非 Next.js 全栈图快。
 
