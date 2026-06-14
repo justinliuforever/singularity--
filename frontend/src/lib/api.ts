@@ -40,6 +40,7 @@ export interface EditDelta {
   addEdges?: { from: string; to: string; type: string; note: string }[];
   removeEventIds?: string[];
   removeEdges?: { from: string; to: string }[];
+  updateEvents?: { id: string; patch: Record<string, any> }[];
 }
 export interface PreviewResult {
   before: Record<string, number>;
@@ -50,6 +51,20 @@ export interface PreviewResult {
 export async function postPreview(delta: EditDelta, applied?: EditDelta): Promise<PreviewResult> {
   const r = await fetch(`${BASE}/preview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
   if (!r.ok) throw new Error(`preview ${r.status}`);
+  return r.json();
+}
+
+export interface CascadeRewrite {
+  id: string;
+  title: string;
+  action: "keep" | "rewrite" | "drop";
+  newSummary?: string;
+  newEffect?: string;
+  reason: string;
+}
+export async function cascadeRewrite(delta: EditDelta, applied?: EditDelta): Promise<{ affected: string[]; rewrites: CascadeRewrite[]; capped?: number }> {
+  const r = await fetch(`${BASE}/cascade`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
+  if (!r.ok) throw new Error(`cascade ${r.status}`);
   return r.json();
 }
 

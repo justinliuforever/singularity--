@@ -228,7 +228,7 @@ export interface Msg {
   content: string;
 }
 
-export async function callDeepSeek(system: string, messages: Msg[]): Promise<string> {
+export async function callDeepSeek(system: string, messages: Msg[], opts?: { maxTokens?: number; temperature?: number }): Promise<string> {
   const KEY = process.env.DEEPSEEK_API_KEY;
   const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
   const BASE = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
@@ -239,8 +239,8 @@ export async function callDeepSeek(system: string, messages: Msg[]): Promise<str
     body: JSON.stringify({
       model: MODEL,
       messages: [{ role: "system", content: system }, ...messages],
-      temperature: 0.85,
-      max_tokens: 800,
+      temperature: opts?.temperature ?? 0.85,
+      max_tokens: opts?.maxTokens ?? 800,
     }),
   });
   if (!res.ok) throw new Error(`DeepSeek ${res.status}: ${(await res.text()).slice(0, 300)}`);

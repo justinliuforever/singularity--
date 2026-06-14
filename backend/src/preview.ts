@@ -13,13 +13,18 @@ export interface EditDelta {
   addEdges?: StoryEdge[];
   removeEventIds?: string[];
   removeEdges?: { from: string; to: string }[];
+  updateEvents?: { id: string; patch: Partial<StoryEvent> }[];
 }
 
-function applyDelta(base: StoryGraph, d: EditDelta): StoryGraph {
+export function applyDelta(base: StoryGraph, d: EditDelta): StoryGraph {
   const rmEv = new Set(d.removeEventIds ?? []);
   const rmEd = d.removeEdges ?? [];
+  const patch = new Map((d.updateEvents ?? []).map((u) => [u.id, u.patch]));
   const isRmEd = (e: { from: string; to: string }) => rmEd.some((r) => r.from === e.from && r.to === e.to);
-  const events = base.events.filter((e) => !rmEv.has(e.id)).concat(((d.addEvents ?? []) as StoryEvent[]).filter((e) => !rmEv.has(e.id)));
+  const events = base.events
+    .filter((e) => !rmEv.has(e.id))
+    .concat(((d.addEvents ?? []) as StoryEvent[]).filter((e) => !rmEv.has(e.id)))
+    .map((e) => (patch.has(e.id) ? { ...e, ...patch.get(e.id) } : e));
   const evIds = new Set(events.map((e) => e.id));
   const edges = [...base.edges, ...((d.addEdges ?? []) as StoryEdge[])]
     .filter((e) => evIds.has(e.from) && evIds.has(e.to)) // 端点必须存在（自动清悬空边）

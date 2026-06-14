@@ -2,14 +2,18 @@ import { create } from "zustand";
 import type { StoryEvent, StoryEdge } from "@liumang/shared";
 import type { Audit, Severity, PreviewResult } from "./lib/api";
 
+/** 对现有事件的内容补丁（改标题/摘要/因果文字/角色…） */
+export type EventPatch = Partial<Pick<StoryEvent, "title" | "summary" | "effect" | "motive" | "type" | "actors" | "facts">>;
 /** P4 改本草稿（仅会话，不落盘） */
 export interface Draft {
   addEvents: StoryEvent[];
   addEdges: StoryEdge[];
   removeEventIds: string[];
   removeEdges: { from: string; to: string }[];
+  /** 改现有事件的内容（连锁改写/直接编辑） */
+  updateEvents: { id: string; patch: EventPatch }[];
 }
-const emptyDraft = (): Draft => ({ addEvents: [], addEdges: [], removeEventIds: [], removeEdges: [] });
+const emptyDraft = (): Draft => ({ addEvents: [], addEdges: [], removeEventIds: [], removeEdges: [], updateEvents: [] });
 /** 三段流水线当前阶段 */
 export type EditStage = "idle" | "frame" | "verify" | "done";
 
@@ -68,10 +72,21 @@ interface UIState {
   /** 正在编辑的边（点边后弹插入/删除面板） */
   pendingEdge: { from: string; to: string } | null;
   setPendingEdge: (e: { from: string; to: string } | null) => void;
+  /** 正在编辑内容的事件 id（弹编辑面板） */
+  editNodeId: string | null;
+  setEditNodeId: (id: string | null) => void;
+  /** 下游连锁改写抽屉是否打开 */
+  cascadeOpen: boolean;
+  setCascadeOpen: (b: boolean) => void;
   toggleEdit: () => void;
   draftDeleteEvent: (id: string) => void;
+  draftUndeleteEvent: (id: string) => void;
   draftRemoveEdge: (from: string, to: string) => void;
   draftInsert: (ev: StoryEvent, fromId: string, toId: string) => void;
+  /** 改现有事件内容（同一 id 合并补丁；patch 传 null 字段不动） */
+  draftUpdateEvent: (id: string, patch: EventPatch) => void;
+  /** 撤掉对某事件的内容改动 */
+  draftClearUpdate: (id: string) => void;
   clearDraft: () => void;
   /** 应用草稿：并入 applied 层、退出编辑（本会话生效） */
   commitDraft: () => void;
@@ -125,6 +140,8 @@ export const useUI = create<UIState>((set) => ({
   editStage: "idle",
   preview: null,
   pendingEdge: null,
+  editNodeId: null,
+  cascadeOpen: false,
   detailStack: [],
 
   set: (p) => set(p),
@@ -135,9 +152,12 @@ export const useUI = create<UIState>((set) => ({
     set({ audit: a, flagged });
   },
   setPendingEdge: (e) => set({ pendingEdge: e }),
-  toggleEdit: () => set((s) => ({ editing: !s.editing, draft: emptyDraft(), editStage: "idle", preview: null, pendingEdge: null })),
+  setEditNodeId: (id) => set({ editNodeId: id }),
+  setCascadeOpen: (b) => set({ cascadeOpen: b }),
+  toggleEdit: () => set((s) => ({ editing: !s.editing, draft: emptyDraft(), editStage: "idle", preview: null, pendingEdge: null, editNodeId: null, cascadeOpen: false })),
   draftDeleteEvent: (id) =>
     set((s) => (s.draft.removeEventIds.includes(id) ? {} : { draft: { ...s.draft, removeEventIds: [...s.draft.removeEventIds, id] } })),
+  draftUndeleteEvent: (id) => set((s) => ({ draft: { ...s.draft, removeEventIds: s.draft.removeEventIds.filter((x) => x !== id) } })),
   draftRemoveEdge: (from, to) =>
     set((s) => (s.draft.removeEdges.some((r) => r.from === from && r.to === to) ? { pendingEdge: null } : { draft: { ...s.draft, removeEdges: [...s.draft.removeEdges, { from, to }] }, pendingEdge: null })),
   draftInsert: (ev, fromId, toId) =>
@@ -150,6 +170,13 @@ export const useUI = create<UIState>((set) => ({
       },
       pendingEdge: null,
     })),
+  draftUpdateEvent: (id, patch) =>
+    set((s) => {
+      const rest = s.draft.updateEvents.filter((u) => u.id !== id);
+      const prev = s.draft.updateEvents.find((u) => u.id === id)?.patch ?? {};
+      return { draft: { ...s.draft, updateEvents: [...rest, { id, patch: { ...prev, ...patch } }] } };
+    }),
+  draftClearUpdate: (id) => set((s) => ({ draft: { ...s.draft, updateEvents: s.draft.updateEvents.filter((u) => u.id !== id) } })),
   clearDraft: () => set({ draft: emptyDraft(), editStage: "idle", preview: null, pendingEdge: null }),
   commitDraft: () =>
     set((s) => ({
@@ -158,14 +185,18 @@ export const useUI = create<UIState>((set) => ({
         addEdges: [...s.applied.addEdges, ...s.draft.addEdges],
         removeEventIds: [...s.applied.removeEventIds, ...s.draft.removeEventIds],
         removeEdges: [...s.applied.removeEdges, ...s.draft.removeEdges],
+        // 同一事件的补丁后者覆盖前者
+        updateEvents: [...s.applied.updateEvents.filter((u) => !s.draft.updateEvents.some((d) => d.id === u.id)), ...s.draft.updateEvents],
       },
       draft: emptyDraft(),
       editing: false,
       editStage: "idle",
       preview: null,
       pendingEdge: null,
+      editNodeId: null,
+      cascadeOpen: false,
     })),
-  resetSession: () => set({ applied: emptyDraft(), draft: emptyDraft(), editing: false, editStage: "idle", preview: null, pendingEdge: null }),
+  resetSession: () => set({ applied: emptyDraft(), draft: emptyDraft(), editing: false, editStage: "idle", preview: null, pendingEdge: null, editNodeId: null, cascadeOpen: false }),
   setEditStage: (s2) => set({ editStage: s2 }),
   setPreview: (p) => set({ preview: p }),
   pickFact: (id) => set((s) => ({ selFact: s.selFact === id ? null : id })),

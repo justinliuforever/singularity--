@@ -1,4 +1,4 @@
-import { Sparkles, Zap, ShieldCheck, X, RotateCcw, Check, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Sparkles, Zap, ShieldCheck, X, RotateCcw, Check, AlertTriangle, CheckCircle2, Loader2, Wand2 } from "lucide-react";
 import { useUI, type EditStage } from "../store";
 import type { PreviewResult } from "../lib/api";
 
@@ -9,10 +9,10 @@ const STEPS: { key: EditStage; icon: typeof Zap; label: string; color: string }[
 ];
 const ORDER: EditStage[] = ["idle", "frame", "verify", "done"];
 
-export default function EditHUD() {
-  const { editing, draft, editStage, preview, clearDraft, commitDraft, set } = useUI();
+export default function EditHUD({ affectedCount = 0 }: { affectedCount?: number }) {
+  const { editing, draft, editStage, preview, clearDraft, commitDraft, setCascadeOpen, set } = useUI();
   if (!editing) return null;
-  const dirty = draft.removeEventIds.length + draft.addEvents.length + draft.removeEdges.length > 0;
+  const dirty = draft.removeEventIds.length + draft.addEvents.length + draft.removeEdges.length + draft.updateEvents.length > 0;
   const stageIdx = ORDER.indexOf(editStage);
 
   return (
@@ -59,6 +59,9 @@ export default function EditHUD() {
       {dirty && (
         <div className="flex items-center gap-2 border-t border-ink-700 px-3 py-2">
           <button onClick={clearDraft} className="flex items-center gap-1 rounded-lg border border-ink-700 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:border-rose-400/50 hover:text-rose-200" title="放弃这次改动，回到改本前"><RotateCcw size={12} /> 撤销改动</button>
+          {affectedCount > 0 && (
+            <button onClick={() => setCascadeOpen(true)} className="flex items-center gap-1 rounded-lg border border-amber-400/50 bg-amber-400/10 px-2.5 py-1.5 text-[11px] text-amber-200 hover:bg-amber-400/20" title="让 AI 编剧逐个提议下游剧情怎么跟着改"><Wand2 size={12} /> AI 连锁改写下游 · {affectedCount}</button>
+          )}
           <button onClick={commitDraft} className="ml-auto flex items-center gap-1 rounded-lg bg-accent/80 px-3 py-1.5 text-[11px] text-white hover:bg-accent" title="把这次改动应用到画布，本次会话内一直生效（刷新即还原，不写本子）"><Check size={12} /> 应用改动 · 本会话生效</button>
         </div>
       )}

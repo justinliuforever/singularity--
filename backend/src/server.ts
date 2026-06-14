@@ -15,6 +15,7 @@ import { auditStory } from "./audit.js";
 import { solveStory } from "./solver.js";
 import { previewEdit } from "./preview.js";
 import { suggestInserts } from "./suggest.js";
+import { cascadeRewrite } from "./cascade.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv({ path: path.resolve(__dirname, "../../.env") });
@@ -58,6 +59,15 @@ app.post("/suggest", async (c) => {
 app.post("/preview", async (c) => {
   try {
     return c.json(await previewEdit(await c.req.json()));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// P4b 下游连锁改写：改动 delta → LLM 逐个提议下游怎么跟着改（keep/rewrite/drop）
+app.post("/cascade", async (c) => {
+  try {
+    return c.json(await cascadeRewrite(await c.req.json()));
   } catch (e: any) {
     return c.json({ error: String(e?.message ?? e) }, 500);
   }

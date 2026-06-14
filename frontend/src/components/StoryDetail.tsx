@@ -9,6 +9,8 @@ import { postPreview } from "../lib/api";
 import StoryMinimap from "./StoryMinimap";
 import EditHUD from "./EditHUD";
 import InsertPanel from "./InsertPanel";
+import EditNodePanel from "./EditNodePanel";
+import CascadeDrawer from "./CascadeDrawer";
 
 const NODE_W = 236;
 const NODE_H = 138;
@@ -33,6 +35,7 @@ function StoryCard({ data }: { data: NodeData }) {
   const flag = flagged[ev.id];
   const removed = editing && draft.removeEventIds.includes(ev.id);
   const isNew = editing && draft.addEvents.some((e) => e.id === ev.id);
+  const edited = editing && draft.updateEvents.some((u) => u.id === ev.id);
   const color = TYPE_COLOR[ev.type] ?? "#60a5fa";
   const sel = selEvent === ev.id;
   const hot = hoverEvent === ev.id;
@@ -74,6 +77,7 @@ function StoryCard({ data }: { data: NodeData }) {
   // 改本草稿态覆盖
   if (removed) { border = "border-rose-400/60"; opacity = 0.4; }
   else if (isNew) { border = "border-emerald-400"; glow = "0 0 0 2px #34d399, 0 0 18px #34d39988"; }
+  else if (edited) { border = "border-sky-400/70"; glow = "0 0 0 1px #38bdf8aa, 0 0 13px #38bdf877"; }
   else if (affected && !origin) { glow = "0 0 0 1px #f59e0baa, 0 0 14px #f59e0b66"; }
 
   return (
@@ -89,6 +93,7 @@ function StoryCard({ data }: { data: NodeData }) {
       <div className="flex h-full flex-col gap-1 py-2 pl-3.5 pr-2.5">
         <div className="flex items-center gap-1.5 text-[9px]">
           <span className="rounded px-1 py-0.5 font-medium" style={{ background: `${color}22`, color }}>{TYPE_LABEL[ev.type] ?? ev.type}</span>
+          {edited && <span className="rounded bg-sky-400/90 px-1 py-0.5 text-[8px] font-bold text-ink-950" title="本次改本已改写此事件">✎改</span>}
           {flag && <span className="grid h-3 w-3 place-items-center rounded-full text-[7px] text-ink-950" style={{ background: flag === "error" ? "#fb7185" : flag === "warn" ? "#f59e0b" : "#38bdf8" }} title="逻辑体检发现问题">!</span>}
           {ev.act && <span className="rounded bg-accent/15 px-1 text-accent-soft">{ev.act}</span>}
           {ev.storyTime && <span className="text-zinc-600">{ev.storyTime}</span>}
@@ -152,7 +157,7 @@ function computeScope(story: StoryGraph, detail: { kind: string; id: string }) {
 }
 
 export default function StoryDetail({ story, portraitOf = () => null }: { story: StoryGraph; portraitOf?: (c: string) => string | null }) {
-  const { detailStack, eventMode, eventDepth, propLevel, selEvent, editing, draft, applied, toggleEdit, draftDeleteEvent, setPendingEdge, setEditStage, setPreview, pickEvent, openDetail, backDetail, jumpDetail, setEventMode, setEventDepth, set } = useUI();
+  const { detailStack, eventMode, eventDepth, propLevel, selEvent, editing, draft, applied, toggleEdit, draftDeleteEvent, setPendingEdge, setEditNodeId, setEditStage, setPreview, pickEvent, openDetail, backDetail, jumpDetail, setEventMode, setEventDepth, set } = useUI();
   const detail = detailStack[detailStack.length - 1];
   const isEvent = detail?.kind === "event";
   const [baseNodes, setBaseNodes] = useState<Node[]>([]);
@@ -178,7 +183,7 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
     for (const e of story.events) adj.set(e.id, []);
     for (const e of draft.addEvents) adj.set(e.id, []);
     for (const ed of [...story.edges, ...draft.addEdges]) if (ed.type !== "contradicts") adj.get(ed.from)?.push(ed.to);
-    const seeds = [...draft.removeEventIds, ...draft.addEvents.map((e) => e.id), ...draft.removeEdges.map((r) => r.to)];
+    const seeds = [...draft.removeEventIds, ...draft.addEvents.map((e) => e.id), ...draft.removeEdges.map((r) => r.to), ...draft.updateEvents.map((u) => u.id)];
     const seen = new Set<string>(seeds);
     let frontier = [...seeds];
     while (frontier.length) {
@@ -214,7 +219,9 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
     // 草稿新增事件并入布局（去重）
     const scopeSet = new Set(view.nodes.map((n) => n.id));
     const allNodes = editing ? [...view.nodes, ...draft.addEvents.filter((e) => !scopeSet.has(e.id))] : view.nodes;
-    const rfNodes: Node[] = allNodes.map((ev) => {
+    const patchMap = new Map(draft.updateEvents.map((u) => [u.id, u.patch]));
+    const rfNodes: Node[] = allNodes.map((ev0) => {
+      const ev = editing && patchMap.has(ev0.id) ? ({ ...ev0, ...patchMap.get(ev0.id) } as StoryEvent) : ev0; // 显示改写后的内容
       const m = meta?.get(ev.id);
       return {
         id: ev.id, type: "story", position: { x: 0, y: 0 },
@@ -251,7 +258,7 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
   // 改本三段流水线：草稿变化 → ②引擎划范围(动画) → ③求解器盖章(/preview)
   useEffect(() => {
     if (!editing) return;
-    const dirty = draft.removeEventIds.length + draft.addEvents.length + draft.removeEdges.length > 0;
+    const dirty = draft.removeEventIds.length + draft.addEvents.length + draft.removeEdges.length + draft.updateEvents.length > 0;
     if (!dirty) { setEditStage("idle"); setPreview(null); return; }
     let live = true;
     setEditStage("frame");
@@ -260,7 +267,7 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
       if (!live) return;
       setEditStage("verify");
       try {
-        const p = await postPreview({ addEvents: draft.addEvents, addEdges: draft.addEdges, removeEventIds: draft.removeEventIds, removeEdges: draft.removeEdges }, applied);
+        const p = await postPreview({ addEvents: draft.addEvents, addEdges: draft.addEdges, removeEventIds: draft.removeEventIds, removeEdges: draft.removeEdges, updateEvents: draft.updateEvents }, applied);
         if (live) { setPreview(p); setEditStage("done"); }
       } catch { if (live) setEditStage("done"); }
     }, 1150);
@@ -336,6 +343,7 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
           </button>
           {editing && selEvent && !draft.removeEventIds.includes(selEvent) && (
             <>
+              <button onClick={() => setEditNodeId(selEvent)} className="flex items-center gap-1 rounded-lg border border-sky-400/50 bg-sky-500/10 px-2 py-1 text-[10.5px] text-sky-200 hover:bg-sky-500/20"><Pencil size={12} /> 编辑「{(story.events.find((e) => e.id === selEvent)?.title ?? "").slice(0, 8)}」</button>
               <button onClick={() => draftDeleteEvent(selEvent)} className="flex items-center gap-1 rounded-lg border border-rose-400/50 bg-rose-500/10 px-2 py-1 text-[10.5px] text-rose-200 hover:bg-rose-500/20"><Trash2 size={12} /> 删除「{(story.events.find((e) => e.id === selEvent)?.title ?? "").slice(0, 8)}」</button>
               {(() => {
                 const succ = [...story.edges, ...draft.addEdges].find((e) => e.from === selEvent && !draft.removeEdges.some((r) => r.from === e.from && r.to === e.to));
@@ -371,7 +379,9 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
       </ReactFlow>
 
       <InsertPanel story={story} />
-      <EditHUD />
+      <EditNodePanel story={story} />
+      <CascadeDrawer story={story} />
+      <EditHUD affectedCount={affected.size} />
       {!editing && <div className="absolute bottom-3 right-3 z-10"><StoryMinimap story={story} highlight={scopeIds} caption={`${kindLabel}：${labelOf(detail)}`} portraitOf={portraitOf} /></div>}
     </div>
   );
