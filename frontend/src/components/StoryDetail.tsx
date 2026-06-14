@@ -25,8 +25,9 @@ interface NodeData { ev: StoryEvent; role?: "spine" | "ctx"; side?: Side; layer?
 
 /** 富卡片节点：锚点(焦点)/选中/三模式激活态 */
 function StoryCard({ data }: { data: NodeData }) {
-  const { selEvent, hoverEvent, propLevel } = useUI();
+  const { selEvent, hoverEvent, propLevel, flagged } = useUI();
   const { ev, role, side, layer = 0, sideMax = 0, mode, origin } = data;
+  const flag = flagged[ev.id];
   const color = TYPE_COLOR[ev.type] ?? "#60a5fa";
   const sel = selEvent === ev.id;
   const hot = hoverEvent === ev.id;
@@ -76,6 +77,7 @@ function StoryCard({ data }: { data: NodeData }) {
       <div className="flex h-full flex-col gap-1 py-2 pl-3.5 pr-2.5">
         <div className="flex items-center gap-1.5 text-[9px]">
           <span className="rounded px-1 py-0.5 font-medium" style={{ background: `${color}22`, color }}>{TYPE_LABEL[ev.type] ?? ev.type}</span>
+          {flag && <span className="grid h-3 w-3 place-items-center rounded-full text-[7px] text-ink-950" style={{ background: flag === "error" ? "#fb7185" : flag === "warn" ? "#f59e0b" : "#38bdf8" }} title="逻辑体检发现问题">!</span>}
           {ev.act && <span className="rounded bg-accent/15 px-1 text-accent-soft">{ev.act}</span>}
           {ev.storyTime && <span className="text-zinc-600">{ev.storyTime}</span>}
           {mode === "explore" && side === "up" && <span className="ml-auto text-zinc-600">前因</span>}

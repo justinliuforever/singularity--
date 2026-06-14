@@ -11,6 +11,8 @@ import { loadKB, buildSystemPrompt, leakAudit, callDeepSeek, analyzeTurn, probeQ
 import { loadDossier, loadAct } from "./dossier.js";
 import { clueById } from "./clues.js";
 import { loadStory } from "./story.js";
+import { auditStory } from "./audit.js";
+import { solveStory } from "./solver.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv({ path: path.resolve(__dirname, "../../.env") });
@@ -35,6 +37,19 @@ app.get("/graph", (c) => c.json(GRAPH));
 app.get("/story", (c) => {
   try {
     return c.json(loadStory());
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// 创作体检台 · 确定性图检查(P3a) + ASP 求解器(P3b)
+app.get("/audit", async (c) => {
+  try {
+    const a = auditStory();
+    const s = await solveStory();
+    const rank: Record<string, number> = { error: 0, warn: 1, info: 2 };
+    const findings = [...a.findings, ...s.findings].sort((x, y) => rank[x.severity] - rank[y.severity]);
+    return c.json({ findings, stats: { ...a.stats, temporal: s.temporal, unsolvable: s.unsolvable }, solver: s.solver });
   } catch (e: any) {
     return c.json({ error: String(e?.message ?? e) }, 500);
   }

@@ -14,6 +14,27 @@ export async function fetchStory(): Promise<StoryGraph> {
   return r.json();
 }
 
+export type Severity = "error" | "warn" | "info";
+export interface Finding {
+  id: string;
+  type: "contradiction" | "cycle" | "unmotivated" | "temporal" | "unsolvable";
+  severity: Severity;
+  title: string;
+  detail: string;
+  events: string[];
+  bySolver?: boolean;
+}
+export interface Audit {
+  findings: Finding[];
+  stats: Record<string, number>;
+  solver?: string;
+}
+export async function fetchAudit(): Promise<Audit> {
+  const r = await fetch(`${BASE}/audit`);
+  if (!r.ok) throw new Error(`audit ${r.status}`);
+  return r.json();
+}
+
 export interface Grounding {
   pokesWall: boolean;
   drewOn: string[];

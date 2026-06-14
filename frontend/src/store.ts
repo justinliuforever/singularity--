@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Audit, Severity } from "./lib/api";
 
 /** 两种模式 = 一引擎两面 G(幕,视角)：现场(玩家·迷雾) / 上帝(创作·全知) */
 export type Mode = "scene" | "god";
@@ -40,6 +41,10 @@ interface UIState {
   eventDepth: number;
   /** P2 影响推演：当前点亮到第几波（-1=未推演） */
   propLevel: number;
+  /** P3 创作体检：报告 + 事件→最高严重度 映射（画布徽章用） */
+  audit: Audit | null;
+  flagged: Record<string, Severity>;
+  setAudit: (a: Audit) => void;
 
   /** L2 聚焦详图导航栈（空=L1总览，栈顶=当前详图）——支持面包屑/返回上一步 */
   detailStack: { kind: DetailKind; id: string }[];
@@ -78,9 +83,17 @@ export const useUI = create<UIState>((set) => ({
   eventMode: "explore",
   eventDepth: 1,
   propLevel: -1,
+  audit: null,
+  flagged: {},
   detailStack: [],
 
   set: (p) => set(p),
+  setAudit: (a) => {
+    const rank: Record<Severity, number> = { error: 0, warn: 1, info: 2 };
+    const flagged: Record<string, Severity> = {};
+    for (const f of a.findings) for (const ev of f.events) if (!flagged[ev] || rank[f.severity] < rank[flagged[ev]]) flagged[ev] = f.severity;
+    set({ audit: a, flagged });
+  },
   pickFact: (id) => set((s) => ({ selFact: s.selFact === id ? null : id })),
   pickEvent: (id) => set((s) => ({ selEvent: s.selEvent === id ? null : id })),
   openDetail: (kind, id, mode) =>

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clapperboard, LogIn, MousePointerClick, Loader2 } from "lucide-react";
+import { Clapperboard, LogIn, MousePointerClick, Loader2, Stethoscope } from "lucide-react";
 import { sliceGraph, type Graph, type StoryGraph } from "@liumang/shared";
-import { fetchGraph, fetchStory } from "./lib/api";
+import { fetchGraph, fetchStory, fetchAudit } from "./lib/api";
 import { useUI } from "./store";
 import RelationLens from "./components/RelationLens";
 import StoryCanvas from "./components/StoryCanvas";
 import StoryDetail from "./components/StoryDetail";
 import EventDetail from "./components/EventDetail";
+import AuditPanel from "./components/AuditPanel";
 import ActScrubber from "./components/ActScrubber";
 import TopBar from "./components/TopBar";
 import Dossier from "./components/Dossier";
@@ -18,7 +19,8 @@ export default function App() {
   const [story, setStory] = useState<StoryGraph | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [actOpen, setActOpen] = useState(false);
-  const { mode, act, perspective, selEvent, detailStack, set, enterChar } = useUI();
+  const [auditOpen, setAuditOpen] = useState(false);
+  const { mode, act, perspective, selEvent, detailStack, audit, set, setAudit, enterChar } = useUI();
   const detail = detailStack[detailStack.length - 1] ?? null;
 
   useEffect(() => {
@@ -30,7 +32,8 @@ export default function App() {
       })
       .catch((e) => setErr(String(e.message ?? e)));
     fetchStory().then(setStory).catch(() => {});
-  }, [set]);
+    fetchAudit().then(setAudit).catch(() => {});
+  }, [set, setAudit]);
 
   const slice = useMemo(() => (graph ? sliceGraph(graph, act, perspective) : null), [graph, act, perspective]);
   const curActName = useMemo(() => graph?.meta.acts.find((a) => a.ord === act)?.name ?? `第${act}幕`, [graph, act]);
@@ -66,7 +69,15 @@ export default function App() {
             {mode === "scene" ? (
               <span className="text-[10px] text-zinc-600">点关系网里的人 → 进入 TA 的视角</span>
             ) : (
-              <span className="text-[10px] text-zinc-600">创作画布 · 每行一个角色、每列一幕 · 卡片=事件 · 连线=因果 · 点角色泳道聚焦 TA 的主线 · 点事件看因果</span>
+              <>
+                <button
+                  onClick={() => setAuditOpen(true)}
+                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors ${audit && audit.findings.length ? "border-amber-400/50 text-amber-200 hover:bg-amber-400/10" : "border-ink-700 text-zinc-300 hover:border-emerald-400/50 hover:text-emerald-200"}`}
+                >
+                  <Stethoscope size={13} /> 逻辑体检{audit ? ` · ${audit.findings.length}` : ""}
+                </button>
+                <span className="text-[10px] text-zinc-600">双击事件展开 · 点泳道聚焦角色主线</span>
+              </>
             )}
           </div>
 
@@ -83,6 +94,7 @@ export default function App() {
               <div className="grid h-full place-items-center text-zinc-500"><div className="flex items-center gap-2 text-sm"><Loader2 size={15} className="animate-spin" />编织故事图…</div></div>
             )}
             {actOpen && <ActDossier ord={act} name={curActName} onClose={() => setActOpen(false)} />}
+            {auditOpen && <AuditPanel onClose={() => setAuditOpen(false)} />}
           </div>
         </div>
 

@@ -31,7 +31,7 @@ const EDGE_COLOR: Record<string, string> = {
 };
 
 export default function StoryCanvas({ story, portraitOf }: { story: StoryGraph; portraitOf: (c: string) => string | null }) {
-  const { perspective, selEvent, hoverEvent, pickEvent, openDetail, set } = useUI();
+  const { perspective, selEvent, hoverEvent, flagged, pickEvent, openDetail, set } = useUI();
   const layout = useMemo(() => computeLayout(story), [story]);
 
   const { lanes, cols, pos, W, H } = layout;
@@ -138,6 +138,9 @@ export default function StoryCanvas({ story, portraitOf }: { story: StoryGraph; 
               title="点击看详情 · 双击展开因果邻域"
             >
               <span className="absolute left-0 top-0 h-full w-1" style={{ background: color }} />
+              {flagged[e.id] && (
+                <span className="absolute -right-1 -top-1 grid h-3.5 w-3.5 place-items-center rounded-full text-[8px] text-ink-950" style={{ background: flagged[e.id] === "error" ? "#fb7185" : flagged[e.id] === "warn" ? "#f59e0b" : "#38bdf8" }} title="逻辑体检发现问题">!</span>
+              )}
               <div className="flex h-full flex-col py-1 pl-2.5 pr-2">
                 <div className="line-clamp-2 text-[10.5px] font-medium leading-tight text-zinc-100">{e.title}</div>
                 <div className="mt-auto flex items-center gap-1 text-[8px] text-zinc-500">
