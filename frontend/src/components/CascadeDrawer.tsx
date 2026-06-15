@@ -2,28 +2,45 @@ import { useEffect, useRef, useState } from "react";
 import { Wand2, X, Loader2, Check, Trash2, ArrowRight, ShieldCheck, CornerDownRight } from "lucide-react";
 import type { StoryGraph } from "@liumang/shared";
 import { useUI } from "../store";
-import { cascadeRewrite, type CascadeRewrite } from "../lib/api";
+import { cascadeScope, cascadeRewrite, type CascadeRewrite } from "../lib/api";
 
 /** P4b · 下游连锁改写抽屉：改完上游，AI 逐个提议下游怎么跟着改；接受 → 进草稿 → 求解器重新盖章 */
 export default function CascadeDrawer({ story }: { story: StoryGraph }) {
-  const { cascadeOpen, draft, applied, setCascadeOpen, draftUpdateEvent, draftClearUpdate, draftDeleteEvent, draftUndeleteEvent } = useUI();
+  const { cascadeOpen, draft, applied, setCascadeOpen, draftUpdateEvent, draftClearUpdate, draftDeleteEvent, draftUndeleteEvent, set } = useUI();
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<CascadeRewrite[]>([]);
-  const [capped, setCapped] = useState<number | undefined>();
+  const [total, setTotal] = useState(0); // 受影响下游总数
+  const [done, setDone] = useState(0); // 已分析数
   const [err, setErr] = useState(false);
   const fetchedFor = useRef<string>("");
 
   useEffect(() => {
     if (!cascadeOpen) return;
-    // 仅在打开时抓一次（按当时草稿）；接受改写会改 draft，但不重抓，避免提议漂移
+    const delta = { addEvents: draft.addEvents, addEdges: draft.addEdges, removeEventIds: draft.removeEventIds, removeEdges: draft.removeEdges, updateEvents: draft.updateEvents };
+    // 仅在草稿变化时重抓（接受改写会改 draft，但 key 只看结构性改动，不重抓→提议不漂移）
     const key = JSON.stringify({ a: draft.addEvents.map((e) => e.id), r: draft.removeEventIds, e: draft.removeEdges, u: draft.updateEvents.map((u) => u.id) });
     if (fetchedFor.current === key) return;
     fetchedFor.current = key;
-    setLoading(true); setErr(false); setRows([]);
-    cascadeRewrite({ addEvents: draft.addEvents, addEdges: draft.addEdges, removeEventIds: draft.removeEventIds, removeEdges: draft.removeEdges, updateEvents: draft.updateEvents }, applied)
-      .then((r) => { setRows(r.rewrites); setCapped(r.capped); })
-      .catch(() => setErr(true))
-      .finally(() => setLoading(false));
+    const fresh = () => fetchedFor.current === key; // 草稿没再变 → 这批结果仍有效（关掉再开也继续填）
+    setLoading(true); setErr(false); setRows([]); setTotal(0); setDone(0);
+    // ① 秒算全部受影响范围（确定性）→ ② 分批喂 AI，每批回来就追加（增量显示，不再卡 12 上限）
+    cascadeScope(delta, applied)
+      .then(({ affected }) => {
+        if (!fresh()) return;
+        setTotal(affected.length);
+        if (!affected.length) { setLoading(false); return; }
+        const SIZE = 6;
+        const batches: string[][] = [];
+        for (let i = 0; i < affected.length; i += SIZE) batches.push(affected.slice(i, i + SIZE));
+        let settled = 0;
+        batches.forEach((batch) => {
+          cascadeRewrite(delta, applied, batch)
+            .then((r) => { if (fresh()) setRows((prev) => [...prev, ...r.rewrites]); })
+            .catch(() => {})
+            .finally(() => { if (!fresh()) return; setDone((d) => d + batch.length); if (++settled === batches.length) setLoading(false); });
+        });
+      })
+      .catch(() => { if (fresh()) { setErr(true); setLoading(false); } });
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [cascadeOpen]);
 
@@ -41,40 +58,39 @@ export default function CascadeDrawer({ story }: { story: StoryGraph }) {
   const acceptAll = () => actionable.forEach((r) => (r.action === "drop" ? draftDeleteEvent(r.id) : acceptRewrite(r)));
 
   return (
-    <div className="absolute inset-0 z-30 grid place-items-center bg-black/55 backdrop-blur-sm" onClick={() => setCascadeOpen(false)}>
-      <div className="flex max-h-[82vh] w-[660px] max-w-[94%] flex-col rounded-2xl border border-amber-400/40 bg-ink-900 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="slide-in-right absolute right-0 top-0 bottom-0 z-30 flex w-[372px] max-w-[82%] flex-col border-l border-amber-400/40 bg-ink-900/97 shadow-2xl backdrop-blur">
         {/* 头 */}
         <div className="flex items-center gap-2 border-b border-ink-700 px-4 py-3">
           <Wand2 size={16} className="text-amber-300" />
           <div className="text-[12px] font-semibold text-zinc-100">下游连锁改写</div>
-          <span className="text-[10px] text-zinc-500">改完上游 · AI 提议下游怎么跟着改</span>
+          <span className="text-[10px] text-zinc-500">画布同步高亮 · 悬停看是哪个</span>
           <button onClick={() => setCascadeOpen(false)} className="ml-auto text-zinc-500 hover:text-zinc-200"><X size={15} /></button>
         </div>
 
         {/* 体 */}
         <div className="min-h-[160px] flex-1 overflow-y-auto px-4 py-3">
-          {loading ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-[12px] text-amber-200">
-              <span className="relative"><Wand2 size={28} className="animate-pulse" /><span className="absolute -right-1 -top-1 animate-ping text-amber-300">✦</span></span>
-              AI 编剧通读因果链，逐个判断下游要不要改…
-            </div>
-          ) : err ? (
+          {err ? (
             <div className="py-10 text-center text-[12px] text-zinc-500">连锁分析失败。<button onClick={() => { fetchedFor.current = ""; setCascadeOpen(false); setTimeout(() => setCascadeOpen(true), 0); }} className="text-accent-soft underline">重试</button></div>
-          ) : rows.length === 0 ? (
-            <div className="py-12 text-center text-[12px] text-zinc-500">下游没有受影响的剧情，无需连锁改写。<div className="mt-1 text-[10px] text-zinc-600">（这次改动的因果范围是收敛的）</div></div>
           ) : (
             <div className="space-y-2.5">
-              {actionable.length > 0 && (
-                <div className="flex items-center gap-2 text-[10px] text-zinc-500">
-                  <span>AI 认为 <b className="text-amber-200">{actionable.length}</b> 处下游需要跟着改</span>
-                  <button onClick={acceptAll} className="ml-auto rounded border border-amber-400/40 px-2 py-0.5 text-[10px] text-amber-200 hover:bg-amber-400/10">全部接受</button>
+              {/* 进度：全部下游分批分析，一边出一边显示 */}
+              {(loading || total > 0) && (
+                <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 px-2.5 py-2">
+                  <div className="flex items-center gap-1.5 text-[10px] text-amber-200">
+                    {loading ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} className="text-emerald-300" />}
+                    <span>{loading ? `AI 正在逐批分析下游… ${done}/${total} 处` : `已分析全部 ${total} 处下游`}</span>
+                    {actionable.length > 0 && <button onClick={acceptAll} className="ml-auto rounded border border-amber-400/40 px-1.5 py-0.5 text-amber-200 hover:bg-amber-400/10">全部接受 {actionable.length}</button>}
+                  </div>
+                  {total > 0 && <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-ink-700"><div className="h-full rounded-full bg-amber-400/70 transition-all duration-300" style={{ width: `${Math.round((done / total) * 100)}%` }} /></div>}
                 </div>
               )}
+              {rows.length === 0 && loading && <div className="flex items-center justify-center gap-2 py-8 text-[11px] text-amber-200/80"><Wand2 size={16} className="animate-pulse" /> AI 编剧通读因果链中…</div>}
+              {!loading && total === 0 && <div className="py-12 text-center text-[12px] text-zinc-500">下游没有受影响的剧情，无需连锁改写。<div className="mt-1 text-[10px] text-zinc-600">（这次改动的因果范围是收敛的）</div></div>}
               {actionable.map((r) => {
                 const drop = r.action === "drop";
                 const accepted = drop ? isAcceptedDrop(r.id) : isAcceptedRewrite(r);
                 return (
-                  <div key={r.id} className={`rounded-xl border px-3 py-2.5 transition-colors ${accepted ? "border-emerald-400/50 bg-emerald-500/5" : drop ? "border-rose-400/40 bg-rose-500/5" : "border-sky-400/40 bg-sky-500/5"}`}>
+                  <div key={r.id} onMouseEnter={() => set({ hoverEvent: r.id })} onMouseLeave={() => set({ hoverEvent: null })} className={`rounded-xl border px-3 py-2.5 transition-colors ${accepted ? "border-emerald-400/50 bg-emerald-500/5" : drop ? "border-rose-400/40 bg-rose-500/5" : "border-sky-400/40 bg-sky-500/5"}`}>
                     <div className="flex items-center gap-1.5">
                       {drop ? <Trash2 size={12} className="text-rose-300" /> : <CornerDownRight size={12} className="text-sky-300" />}
                       <span className="text-[11.5px] font-semibold text-zinc-100">{r.title}</span>
@@ -99,15 +115,17 @@ export default function CascadeDrawer({ story }: { story: StoryGraph }) {
                   </div>
                 );
               })}
+              {!loading && total > 0 && actionable.length === 0 && rows.length > 0 && (
+                <div className="py-5 text-center text-[11px] text-emerald-200/80">AI 判断这些下游都不受实质影响，无需改写。</div>
+              )}
               {keeps.length > 0 && (
                 <div className="pt-1">
-                  <div className="mb-1 text-[9.5px] text-zinc-600">AI 判断无需改（{keeps.length}）</div>
+                  <div className="mb-1 text-[9.5px] text-zinc-600">AI 判断无需改（{keeps.length}）{loading && "· 还在分析其余"}</div>
                   <div className="flex flex-wrap gap-1">
-                    {keeps.map((r) => <span key={r.id} className="rounded bg-ink-800 px-1.5 py-0.5 text-[9px] text-zinc-500" title={r.reason}>{r.title}</span>)}
+                    {keeps.map((r) => <span key={r.id} onMouseEnter={() => set({ hoverEvent: r.id })} onMouseLeave={() => set({ hoverEvent: null })} className="rounded bg-ink-800 px-1.5 py-0.5 text-[9px] text-zinc-500" title={r.reason}>{r.title}</span>)}
                   </div>
                 </div>
               )}
-              {capped && <div className="text-center text-[9px] text-amber-300/70">下游过多，本轮只分析了最近 12 处（共 {capped} 处受影响）</div>}
             </div>
           )}
         </div>
@@ -118,7 +136,6 @@ export default function CascadeDrawer({ story }: { story: StoryGraph }) {
           {actionable.length > 0 && <span className="text-[10px] text-zinc-400">已接受 <b className="text-emerald-200">{acceptedCount}</b>/{actionable.length}</span>}
           <button onClick={() => setCascadeOpen(false)} className="ml-auto rounded-lg bg-accent/80 px-3 py-1.5 text-[11px] text-white hover:bg-accent">完成</button>
         </div>
-      </div>
     </div>
   );
 }

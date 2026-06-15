@@ -62,8 +62,13 @@ export interface CascadeRewrite {
   newEffect?: string;
   reason: string;
 }
-export async function cascadeRewrite(delta: EditDelta, applied?: EditDelta): Promise<{ affected: string[]; rewrites: CascadeRewrite[]; capped?: number }> {
-  const r = await fetch(`${BASE}/cascade`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
+export async function cascadeScope(delta: EditDelta, applied?: EditDelta): Promise<{ affected: string[] }> {
+  const r = await fetch(`${BASE}/cascade-scope`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
+  if (!r.ok) throw new Error(`cascade-scope ${r.status}`);
+  return r.json();
+}
+export async function cascadeRewrite(delta: EditDelta, applied?: EditDelta, onlyIds?: string[]): Promise<{ affected: string[]; rewrites: CascadeRewrite[]; capped?: number }> {
+  const r = await fetch(`${BASE}/cascade`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied, onlyIds }) });
   if (!r.ok) throw new Error(`cascade ${r.status}`);
   return r.json();
 }
@@ -72,6 +77,13 @@ export interface SuggestOption { title: string; summary: string; type: string; a
 export async function suggestInserts(fromId: string, toId: string): Promise<{ options: SuggestOption[]; raw?: string }> {
   const r = await fetch(`${BASE}/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fromId, toId }) });
   if (!r.ok) throw new Error(`suggest ${r.status}`);
+  return r.json();
+}
+
+export interface EditOption { title: string; summary: string; effect: string; angle: string }
+export async function suggestEdit(id: string, direction?: string): Promise<{ options: EditOption[]; raw?: string }> {
+  const r = await fetch(`${BASE}/suggest-edit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, direction }) });
+  if (!r.ok) throw new Error(`suggest-edit ${r.status}`);
   return r.json();
 }
 

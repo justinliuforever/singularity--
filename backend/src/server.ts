@@ -14,8 +14,8 @@ import { loadStory } from "./story.js";
 import { auditStory } from "./audit.js";
 import { solveStory } from "./solver.js";
 import { previewEdit } from "./preview.js";
-import { suggestInserts } from "./suggest.js";
-import { cascadeRewrite } from "./cascade.js";
+import { suggestInserts, suggestEdit } from "./suggest.js";
+import { cascadeRewrite, cascadeScope } from "./cascade.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv({ path: path.resolve(__dirname, "../../.env") });
@@ -55,6 +55,16 @@ app.post("/suggest", async (c) => {
   }
 });
 
+// P4b ①LLM 编剧助手：提议"这个事件可以改成什么"（可给方向）
+app.post("/suggest-edit", async (c) => {
+  try {
+    const { id, direction } = await c.req.json<{ id: string; direction?: string }>();
+    return c.json(await suggestEdit(id, direction));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
 // P4 改本预览：草稿 delta → before→after 体检 diff（不落盘）
 app.post("/preview", async (c) => {
   try {
@@ -64,7 +74,16 @@ app.post("/preview", async (c) => {
   }
 });
 
-// P4b 下游连锁改写：改动 delta → LLM 逐个提议下游怎么跟着改（keep/rewrite/drop）
+// P4b 下游连锁·秒算范围（确定性，无 LLM）：返回全部受影响下游 id，前端据此分批
+app.post("/cascade-scope", async (c) => {
+  try {
+    return c.json(cascadeScope(await c.req.json()));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// P4b 下游连锁改写：改动 delta(+可选 onlyIds 一批) → LLM 逐个提议怎么跟着改（keep/rewrite/drop）
 app.post("/cascade", async (c) => {
   try {
     return c.json(await cascadeRewrite(await c.req.json()));

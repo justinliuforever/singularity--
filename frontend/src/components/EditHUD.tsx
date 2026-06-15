@@ -10,13 +10,13 @@ const STEPS: { key: EditStage; icon: typeof Zap; label: string; color: string }[
 const ORDER: EditStage[] = ["idle", "frame", "verify", "done"];
 
 export default function EditHUD({ affectedCount = 0 }: { affectedCount?: number }) {
-  const { editing, draft, editStage, preview, clearDraft, commitDraft, setCascadeOpen, setEventMode, set } = useUI();
+  const { editing, draft, editStage, preview, cascadeOpen, clearDraft, commitDraft, setCascadeOpen, setEventMode, set } = useUI();
   if (!editing) return null;
   const dirty = draft.removeEventIds.length + draft.addEvents.length + draft.removeEdges.length + draft.updateEvents.length > 0;
   const stageIdx = ORDER.indexOf(editStage);
 
   return (
-    <div className="absolute bottom-3 left-1/2 z-20 w-[560px] max-w-[90%] -translate-x-1/2 rounded-2xl border border-accent/40 bg-ink-900/95 shadow-2xl backdrop-blur">
+    <div className="absolute bottom-3 left-1/2 z-20 w-[560px] max-w-[90%] -translate-x-1/2 rounded-2xl border border-accent/40 bg-ink-900/95 shadow-2xl backdrop-blur transition-transform duration-200" style={{ transform: cascadeOpen ? "translateX(calc(-50% - 192px))" : undefined }}>
       {/* 三段流水线 stepper */}
       <div className="flex items-center gap-1 border-b border-ink-700 px-3 py-2">
         <span className="mr-1 text-[11px] font-semibold text-zinc-200">改本推演</span>

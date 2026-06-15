@@ -81,7 +81,7 @@ function StoryCard({ data }: { data: NodeData }) {
   else if (affected && !origin) { glow = "0 0 0 1px #f59e0baa, 0 0 14px #f59e0b66"; }
 
   return (
-    <div className={`relative rounded-xl border bg-ink-850 ${selRing ? "ring-2 ring-sky-400/60" : ""} ${border} ${wavePulse ? "blast-wave" : ""}`} style={{ width: NODE_W, height: NODE_H, opacity, boxShadow: glow }}>
+    <div className={`relative rounded-xl border bg-ink-850 ${hot ? "ring-2 ring-amber-300/90" : selRing ? "ring-2 ring-sky-400/60" : ""} ${border} ${wavePulse ? "blast-wave" : ""}`} style={{ width: NODE_W, height: NODE_H, opacity: hot ? 1 : opacity, boxShadow: hot ? "0 0 0 2px #fcd34d, 0 0 20px #fcd34daa" : glow }}>
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
       <span className="absolute left-0 top-0 h-full w-1.5 rounded-l-xl" style={{ background: color }} />
@@ -165,6 +165,10 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
   const [loading, setLoading] = useState(true);
   const [runId, setRunId] = useState(0);
   const [rf, setRf] = useState<any>(null);
+  // 布局缓存：结构(节点集+边)不变时复用旧坐标，纯内容改动(✎改写)不重排版、不闪
+  const structRef = useRef<string>("");
+  const posRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const fitSigRef = useRef<string>("");
 
   const labelOf = (d: { kind: string; id: string }) =>
     d.kind === "event" ? (story.events.find((e) => e.id === d.id)?.title ?? d.id).slice(0, 14) : d.id;
@@ -224,7 +228,6 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
   // 构图 + ELK
   useEffect(() => {
     let live = true;
-    setLoading(true);
     const meta = view.meta as Map<string, { side: Side; layer: number }> | null;
     // 草稿新增事件并入布局（去重）
     const scopeSet = new Set(view.nodes.map((n) => n.id));
@@ -254,11 +257,22 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
       }
       return { id: `e${i}`, source: ed.from, target: ed.to, label: EDGE_LABEL[ed.type] ?? ed.type, type: "default", animated: anim, markerEnd: { type: MarkerType.ArrowClosed, color, width: 15, height: 15 }, style: { stroke: color, strokeWidth: w, strokeDasharray: dash, opacity: op }, labelStyle: { fill: "#cbd5e1", fontSize: 9 }, labelBgStyle: { fill: "#0f1015", fillOpacity: 0.85 }, labelBgPadding: [3, 1] as [number, number], data: { type: ed.type } };
     });
+    // 结构指纹（模式+节点集+边端点）：只在结构变化时重排版；纯内容改动(✎改写/波及变化)复用旧坐标 → 接受连锁不闪、节点原地变 ✎改
+    const structKey = eventMode + "|" + rfNodes.map((n) => n.id).sort().join(",") + "|" + allEdges.map((e) => e.from + ">" + e.to).sort().join(",");
+    if (structKey === structRef.current && posRef.current.size) {
+      setBaseNodes(rfNodes.map((n) => ({ ...n, position: posRef.current.get(n.id) ?? { x: 0, y: 0 } })));
+      setBaseEdges(rfEdges);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const g: any = { id: "root", layoutOptions: { "elk.algorithm": "layered", "elk.direction": "RIGHT", "elk.layered.spacing.nodeNodeBetweenLayers": "96", "elk.spacing.nodeNode": "30", "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX" }, children: rfNodes.map((n) => ({ id: n.id, width: NODE_W, height: NODE_H })), edges: rfEdges.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })) };
     elk.layout(g).then((res: any) => {
       if (!live) return;
-      const posById = new Map((res.children ?? []).map((c: any) => [c.id, { x: c.x, y: c.y }]));
-      setBaseNodes(rfNodes.map((n) => ({ ...n, position: (posById.get(n.id) as any) ?? { x: 0, y: 0 } })));
+      const posById = new Map<string, { x: number; y: number }>((res.children ?? []).map((c: any) => [c.id, { x: c.x, y: c.y }]));
+      posRef.current = posById;
+      structRef.current = structKey;
+      setBaseNodes(rfNodes.map((n) => ({ ...n, position: posById.get(n.id) ?? { x: 0, y: 0 } })));
       setBaseEdges(rfEdges);
       setLoading(false);
     }).catch(() => { if (live) setLoading(false); });
@@ -284,8 +298,14 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
     return () => { live = false; clearTimeout(t); };
   }, [editing, draft, applied, setEditStage, setPreview]);
 
-  // 切换 scope 后自动 fit（相机平滑）
-  useEffect(() => { if (!loading && rf) rf.fitView({ padding: 0.16, duration: 420 }); }, [baseNodes, rf]); // eslint-disable-line
+  // 切换 scope 后自动 fit（相机平滑）；纯内容改动(节点集不变)不重 fit，相机不跳
+  useEffect(() => {
+    if (loading || !rf) return;
+    const sig = baseNodes.map((n) => n.id).sort().join(",");
+    if (sig === fitSigRef.current) return;
+    fitSigRef.current = sig;
+    rf.fitView({ padding: 0.16, duration: 420 });
+  }, [baseNodes, rf, loading]);
 
   // 推演/溯源动画：逐波点亮。改本时直接全亮（不放波动画），让草稿态(✎改/✗/＋/波及)当主角
   useEffect(() => {
@@ -382,7 +402,7 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
       {loading && <div className="absolute inset-0 z-20 grid place-items-center bg-ink-950/60"><div className="flex items-center gap-2 text-sm text-zinc-400"><Loader2 size={15} className="animate-spin" />分层布局中…</div></div>}
 
       <ReactFlow nodes={baseNodes} edges={edges} nodeTypes={nodeTypes} onInit={setRf} fitView fitViewOptions={{ padding: 0.16 }} minZoom={0.2} maxZoom={1.6} nodesDraggable nodesConnectable={false}
-        onNodeClick={(_, n) => { pickEvent(n.id); rf?.setCenter(n.position.x + NODE_W / 2, n.position.y + NODE_H / 2, { zoom: rf.getZoom?.() ?? 0.85, duration: 380 }); }}
+        onNodeClick={(_, n) => { if (editing) set({ selEvent: n.id }); else pickEvent(n.id); rf?.setCenter(n.position.x + NODE_W / 2, n.position.y + NODE_H / 2, { zoom: rf.getZoom?.() ?? 0.85, duration: 380 }); }}
         onNodeDoubleClick={(_, n) => { if (!editing) openDetail("event", n.id, "explore"); }}
         onEdgeClick={(_, e) => { if (editing) setPendingEdge({ from: e.source!, to: e.target! }); }}
         proOptions={{ hideAttribution: true }}>

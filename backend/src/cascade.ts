@@ -59,8 +59,18 @@ function describeChange(cur: StoryGraph, d: EditDelta): string[] {
   return lines;
 }
 
-export async function cascadeRewrite(body: EditDelta & { applied?: EditDelta }): Promise<{ affected: string[]; rewrites: CascadeRewrite[]; capped?: number }> {
+/** 只算"哪些下游受影响"（确定性，无 LLM、无上限）——前端拿它分批喂给 LLM、增量显示 */
+export function cascadeScope(body: EditDelta & { applied?: EditDelta }): { affected: string[] } {
   const { applied, ...delta } = body;
+  const base = loadStory();
+  const cur = applied ? applyDelta(base, applied) : base;
+  const modified = applyDelta(cur, delta);
+  const modIds = new Set(modified.events.map((e) => e.id));
+  return { affected: downstreamAffected(cur, delta, modIds) };
+}
+
+export async function cascadeRewrite(body: EditDelta & { applied?: EditDelta; onlyIds?: string[] }): Promise<{ affected: string[]; rewrites: CascadeRewrite[]; capped?: number }> {
+  const { applied, onlyIds, ...delta } = body;
   const base = loadStory();
   const cur = applied ? applyDelta(base, applied) : base;
   const modified = applyDelta(cur, delta);
@@ -68,9 +78,17 @@ export async function cascadeRewrite(body: EditDelta & { applied?: EditDelta }):
   const byMod = new Map(modified.events.map((e) => [e.id, e]));
 
   let affected = downstreamAffected(cur, delta, modIds);
-  const CAP = 12;
-  const capped = affected.length > CAP ? affected.length : undefined;
-  affected = affected.slice(0, CAP);
+  let capped: number | undefined;
+  if (onlyIds) {
+    // 前端分批：只分析这一批（不设上限）
+    const set = new Set(onlyIds);
+    affected = affected.filter((id) => set.has(id));
+  } else {
+    // 直接整体调用（兜底）：留个较高的安全上限，避免单次 prompt 过长
+    const CAP = 14;
+    capped = affected.length > CAP ? affected.length : undefined;
+    affected = affected.slice(0, CAP);
+  }
   if (!affected.length) return { affected: [], rewrites: [] };
 
   const changeLines = describeChange(cur, delta);
