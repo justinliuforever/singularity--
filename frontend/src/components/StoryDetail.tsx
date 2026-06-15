@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, Background, Handle, Position, MarkerType, type Node, type Edge } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import ELK from "elkjs/lib/elk.bundled.js";
@@ -195,6 +195,16 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
     return seen;
   }, [editing, draft, story]);
 
+  // 改本一旦产生下游波及 → 自动切「推演下游」，把全部下游铺开（草稿态当主角）；用户手动切走后不再强切
+  const autoBlasted = useRef(false);
+  useEffect(() => {
+    if (affected.size === 0) { autoBlasted.current = false; return; }
+    if (editing && isEvent && !autoBlasted.current) {
+      autoBlasted.current = true;
+      if (eventMode !== "blast") setEventMode("blast");
+    }
+  }, [editing, isEvent, affected, eventMode, setEventMode]);
+
   const metrics = useMemo(() => {
     if (!isEvent || !view.meta) return null;
     const meta = view.meta as Map<string, { side: Side; layer: number }>;
@@ -277,14 +287,15 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
   // 切换 scope 后自动 fit（相机平滑）
   useEffect(() => { if (!loading && rf) rf.fitView({ padding: 0.16, duration: 420 }); }, [baseNodes, rf]); // eslint-disable-line
 
-  // 推演/溯源动画：逐波点亮
+  // 推演/溯源动画：逐波点亮。改本时直接全亮（不放波动画），让草稿态(✎改/✗/＋/波及)当主角
   useEffect(() => {
     if (!(isEvent && (eventMode === "blast" || eventMode === "trace"))) { set({ propLevel: -1 }); return; }
+    if (editing) { set({ propLevel: animMax }); return; }
     set({ propLevel: 0 });
     let k = 0;
     const t = setInterval(() => { k++; set({ propLevel: k }); if (k >= animMax) clearInterval(t); }, 560);
     return () => { clearInterval(t); set({ propLevel: -1 }); };
-  }, [isEvent, eventMode, animMax, runId, set]);
+  }, [isEvent, eventMode, animMax, runId, set, editing]);
 
   // 边按模式着色 / 通电
   const edges = useMemo(() => {

@@ -10,7 +10,7 @@ const STEPS: { key: EditStage; icon: typeof Zap; label: string; color: string }[
 const ORDER: EditStage[] = ["idle", "frame", "verify", "done"];
 
 export default function EditHUD({ affectedCount = 0 }: { affectedCount?: number }) {
-  const { editing, draft, editStage, preview, clearDraft, commitDraft, setCascadeOpen, set } = useUI();
+  const { editing, draft, editStage, preview, clearDraft, commitDraft, setCascadeOpen, setEventMode, set } = useUI();
   if (!editing) return null;
   const dirty = draft.removeEventIds.length + draft.addEvents.length + draft.removeEdges.length + draft.updateEvents.length > 0;
   const stageIdx = ORDER.indexOf(editStage);
@@ -41,6 +41,15 @@ export default function EditHUD({ affectedCount = 0 }: { affectedCount?: number 
 
       {/* 主体 */}
       <div className="px-3 py-2.5">
+        {dirty && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            {draft.addEvents.length > 0 && <Tally color="#34d399" label="＋新增" n={draft.addEvents.length} />}
+            {draft.updateEvents.length > 0 && <Tally color="#38bdf8" label="✎改写" n={draft.updateEvents.length} />}
+            {draft.removeEventIds.length > 0 && <Tally color="#fb7185" label="✗删除" n={draft.removeEventIds.length} />}
+            {affectedCount > 0 && <Tally color="#f59e0b" label="波及" n={affectedCount} />}
+            <span className="text-[9px] text-zinc-600">· 画布已铺开全部下游，改动态高亮</span>
+          </div>
+        )}
         {!dirty ? (
           <div className="text-[11px] text-zinc-500">
             选中一个事件 → <b className="text-rose-300">删除</b>（看下游怎么崩）；或在两节点的边上 <b className="text-accent-soft">＋插入</b> 新剧情。改完引擎自动推演 + 求解器盖章。
@@ -60,13 +69,17 @@ export default function EditHUD({ affectedCount = 0 }: { affectedCount?: number 
         <div className="flex items-center gap-2 border-t border-ink-700 px-3 py-2">
           <button onClick={clearDraft} className="flex items-center gap-1 rounded-lg border border-ink-700 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:border-rose-400/50 hover:text-rose-200" title="放弃这次改动，回到改本前"><RotateCcw size={12} /> 撤销改动</button>
           {affectedCount > 0 && (
-            <button onClick={() => setCascadeOpen(true)} className="flex items-center gap-1 rounded-lg border border-amber-400/50 bg-amber-400/10 px-2.5 py-1.5 text-[11px] text-amber-200 hover:bg-amber-400/20" title="让 AI 编剧逐个提议下游剧情怎么跟着改"><Wand2 size={12} /> AI 连锁改写下游 · {affectedCount}</button>
+            <button onClick={() => { setEventMode("blast"); setCascadeOpen(true); }} className="flex items-center gap-1 rounded-lg border border-amber-400/50 bg-amber-400/10 px-2.5 py-1.5 text-[11px] text-amber-200 hover:bg-amber-400/20" title="先把全部下游铺开，再让 AI 逐个提议怎么跟着改"><Wand2 size={12} /> AI 连锁改写下游 · {affectedCount}</button>
           )}
           <button onClick={commitDraft} className="ml-auto flex items-center gap-1 rounded-lg bg-accent/80 px-3 py-1.5 text-[11px] text-white hover:bg-accent" title="把这次改动应用到画布，本次会话内一直生效（刷新即还原，不写本子）"><Check size={12} /> 应用改动 · 本会话生效</button>
         </div>
       )}
     </div>
   );
+}
+
+function Tally({ color, label, n }: { color: string; label: string; n: number }) {
+  return <span className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px]" style={{ background: `${color}1e`, color }}><b>{n}</b>{label}</span>;
 }
 
 function Diff({ preview }: { preview: PreviewResult }) {
