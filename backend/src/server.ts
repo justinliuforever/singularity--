@@ -7,7 +7,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Graph } from "@liumang/shared";
 import { compileGraph } from "./compile.js";
-import { loadKB, buildSystemPrompt, leakAudit, callDeepSeek, analyzeTurn, probeQuestions, type Msg } from "./chat.js";
+import { loadKB, buildSystemPrompt, leakAudit, callDeepSeek, analyzeTurn, tensionFromHistory, probeQuestions, followupQuestions, type Msg } from "./chat.js";
 import { loadDossier, loadAct } from "./dossier.js";
 import { clueById } from "./clues.js";
 import { loadStory } from "./story.js";
@@ -105,15 +105,26 @@ app.get("/audit", async (c) => {
   }
 });
 
+// 动态追问建议：每轮回复后，结合对话/线索/命门生成最佳"下一个问题"
+app.post("/followup", async (c) => {
+  try {
+    const { character, actName, messages } = await c.req.json<{ character: string; actName: string; messages: Msg[] }>();
+    return c.json({ qs: await followupQuestions(character || "黛利拉", actName || "第三幕", messages || []) });
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
 app.post("/chat", async (c) => {
   try {
     const body = await c.req.json<{ character: string; actName: string; messages: Msg[] }>();
     const character = body.character || "黛利拉";
     const actName = body.actName || "第三幕";
     const kb = loadKB(character, actName);
-    const system = buildSystemPrompt(kb, actName);
-    const audit = leakAudit(system, kb);
     const msgs = body.messages || [];
+    const tension = tensionFromHistory(msgs, kb);
+    const system = buildSystemPrompt(kb, actName, { tension });
+    const audit = leakAudit(system, kb);
     const reply = await callDeepSeek(system, msgs);
     const lastQ = [...msgs].reverse().find((m) => m.role === "user")?.content ?? "";
     const grounding = analyzeTurn(lastQ, reply, kb);

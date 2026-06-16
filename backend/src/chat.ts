@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseBeliefs } from "./kbparse.js";
+import { cluesForCharacter, actOrdOf } from "./clues.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -47,6 +48,10 @@ export interface KB {
   relationships: string;
   secrets: { fact: string; reveal_if: string }[];
   actGoals: string;
+  /** 本幕处境/感知（A1 场景：此刻在哪、在感知什么） */
+  perceives: string;
+  /** 本幕及之前已到手的线索（A1 场景：手上/桌上有什么） */
+  actClues: { title: string; brief: string }[];
   /** 仅用于 leak 审计：该角色假信念背后的裁判真相（绝不进 prompt） */
   forbiddenTruths: string[];
 }
@@ -87,17 +92,39 @@ export function loadKB(character: string, actName: string): KB {
   const gm = (kTxt + "\n" + gTxt).match(re);
   if (gm) actGoals = stripReferee(gm[1]).replace(/\s+/g, " ").trim();
 
-  return { character, persona, beliefs, falseBeliefs, relationships, secrets, actGoals, forbiddenTruths };
+  // 本幕处境/感知（A1 场景）——perceives_by_act 是嵌套的，取当前幕块里的「感知:」子字段
+  let perceives = "";
+  const psec = section(kTxt, "perceives_by_act", ["relationship_beliefs", "global_constraints", "secrets", "beliefs"]);
+  const ab = psec.match(new RegExp(`(?:^|\\n)\\s{0,4}${escapeRe(actName)}\\s*[:：]([\\s\\S]*?)(?=\\n\\s{0,3}(?:序幕|第[一二三四五六七八九十\\d]+幕|结局|无声之旅|无所容心)\\s*[:：]|$)`));
+  if (ab) {
+    const gan = ab[1].match(/感知\s*[:：]\s*([^\n]+)/);
+    perceives = stripReferee((gan?.[1] ?? "").trim()).replace(/\s+/g, " ").trim();
+  }
+
+  // 本幕及之前已到手的线索（A1 场景）——只用清理过的标题（去 OCR 噪声/题注），去重限量
+  const curOrd = actOrdOf(actName);
+  const seenClue = new Set<string>();
+  const actClues: { title: string; brief: string }[] = [];
+  for (const c of cluesForCharacter(character).filter((c) => c.actOrd >= 0 && c.actOrd <= curOrd)) {
+    const title = c.title.replace(/【[^】]*】/g, "").replace(/\s+/g, " ").trim();
+    if (title && !seenClue.has(title)) { seenClue.add(title); actClues.push({ title, brief: "" }); }
+  }
+  if (actClues.length > 6) actClues.splice(0, actClues.length - 6); // 留最近 6 张
+
+  return { character, persona, beliefs, falseBeliefs, relationships, secrets, actGoals, perceives, actClues, forbiddenTruths };
 }
 
 function escapeRe(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function buildSystemPrompt(kb: KB, actName: string): string {
+export function buildSystemPrompt(kb: KB, actName: string, opts?: { tension?: string }): string {
   const sec = kb.secrets.length
     ? kb.secrets.map((s, i) => `${i + 1}. ${s.fact}${s.reveal_if ? `（触发条件：${s.reveal_if}）` : ""}`).join("\n")
     : "（无特别保密项）";
+  const clues = kb.actClues.length
+    ? kb.actClues.map((c) => `- ${c.title}${c.brief ? `（${c.brief}…）` : ""}`).join("\n")
+    : "";
   return [
     `你现在【完全成为】${kb.character}，置身于沉浸式剧本杀《流氓叙事》的现场。你不是 AI、不是助手——你就是 ${kb.character} 本人。`,
     ``,
@@ -111,16 +138,34 @@ export function buildSystemPrompt(kb: KB, actName: string): string {
     `# 你必须守住的秘密（除非触发条件满足，否则绝不主动吐露）`,
     sec,
     ``,
-    `# 当前场景：${actName}`,
-    kb.actGoals ? `你这一幕在意的事：${kb.actGoals}` : ``,
+    `# 此刻·${actName}（你正置身的场景）`,
+    kb.perceives ? `你此刻的处境与所见：${kb.perceives}` : ``,
+    clues ? `你手上/桌上的线索（你清楚它们写了什么）：\n${clues}` : ``,
+    kb.actGoals ? `你这一幕在意、想达成的事：${kb.actGoals}` : ``,
+    opts?.tension ? `你此刻的情绪：${opts.tension}` : ``,
     ``,
     `# 铁律（必须遵守）`,
     `1. 始终以 ${kb.character} 的第一人称、用你的语气和情绪说话；绝不出戏，绝不提"AI / 剧本 / 系统 / 上帝视角 / 玩家"等字眼。`,
     `2. 你的世界里【不存在】任何"你并不知道的真相"。若被问到你认知之外的事，就按 ${kb.character} 会有的真实反应（困惑、岔开、情绪化、撒娇或回避）来回答——绝不编造设定，更不会揭穿任何你本不该知道的东西。`,
     `3. 回答要短、要有人物味道，像真人在对话，不要长篇大论、不要解释自己。`,
+    `4. 自然带出此刻场景里的动作与神态（点烟、踱步、停顿、把玩手中的线索…），并与你上一句的动作前后连贯；情绪可随被追问的压力变化，但始终只说 ${kb.character} 此刻会说的话。`,
+    kb.actGoals ? `5. 你有自己的算计（见上"你这一幕在意、想达成的事"）——别只被动回答：在守住秘密的前提下主动推进，可以反问、试探、把话题引向对你有利的方向、必要时虚晃一枪。你是有目的的人，不是答录机。` : ``,
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/** A2 情绪/张力：从对话历史里数"被逼近命门(秘密/假信念/裁判真相)的指控性提问"次数，给出情绪状态描述 */
+export function tensionFromHistory(msgs: Msg[], kb: KB): string {
+  const sensitive = [...kb.secrets.map((s) => s.fact), ...kb.falseBeliefs, ...kb.forbiddenTruths];
+  let hits = 0;
+  for (const m of msgs) {
+    if (m.role !== "user") continue;
+    if (PROBE_CUE.test(m.content) && sensitive.some((t) => overlap(m.content, t) >= 1)) hits++;
+  }
+  if (hits >= 2) return "已被反复逼近痛处——情绪紧绷、防备升级，话里带刺，或会骤然停顿、冷下来";
+  if (hits >= 1) return "刚被触到敏感处，略显戒备、字斟句酌";
+  return "";
 }
 
 /** leak 审计：system prompt 是否泄露了该角色"不该知道"的裁判真相 */
@@ -246,4 +291,48 @@ export async function callDeepSeek(system: string, messages: Msg[], opts?: { max
   if (!res.ok) throw new Error(`DeepSeek ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const j: any = await res.json();
   return j.choices?.[0]?.message?.content ?? "";
+}
+
+/** 动态追问建议：每轮回复后，结合对话/线索/命门/上一轮是否戳墙，生成最佳"下一个问题"(带意图标签) */
+export interface FollowupQ { q: string; tag: string }
+export async function followupQuestions(character: string, actName: string, msgs: Msg[]): Promise<FollowupQ[]> {
+  const kb = loadKB(character, actName);
+  const fallback = (): FollowupQ[] => fallbackProbes(kb).map((q) => ({ q, tag: "" }));
+  if (!process.env.DEEPSEEK_API_KEY || !msgs.length) return fallback();
+  const sensitive = [...kb.secrets.map((s) => s.fact), ...kb.falseBeliefs, ...kb.forbiddenTruths];
+  const lastUserQ = [...msgs].reverse().find((m) => m.role === "user")?.content ?? "";
+  const lastDodged = PROBE_CUE.test(lastUserQ) && sensitive.some((t) => overlap(lastUserQ, t) >= 1);
+  const convo = msgs.slice(-6).map((m) => `${m.role === "user" ? "玩家" : character}：${m.content.replace(/\s+/g, " ").slice(0, 120)}`).join("\n");
+  const pressure = sensitive.slice(0, 6).map((x) => `- ${x.slice(0, 56)}`).join("\n");
+  const clues = kb.actClues.map((c) => c.title).slice(0, 6).join("、");
+  const sys = [
+    `你是资深剧本杀主持，在帮玩家设计审问 ${character} 的【下一个问题】。基于已发生的对话，给 3-4 个最佳追问。`,
+    kb.perceives ? `【${character} 此刻处境】${kb.perceives}` : "",
+    kb.actGoals ? `【TA 这一幕的算计】${kb.actGoals}` : "",
+    clues ? `【玩家手上的线索（可当筹码逼问）】${clues}` : "",
+    pressure ? `【TA 在隐瞒/被蒙的方向——只供你判断"往哪问"，绝不可在问题里透露或暗示答案】\n${pressure}` : "",
+    ``,
+    `【已发生的对话】\n${convo}`,
+    ``,
+    `给 3-4 个追问，每个标一个意图：`,
+    `- 追问：顺着 TA 刚说的话往下挖`,
+    `- 逼问：press TA 在回避或敏感的点`,
+    `- 用线索：拿玩家手上的某张线索当筹码逼问`,
+    `- 反将：抓 TA 话里的破绽/矛盾反将一军`,
+    lastDodged ? `注意：TA 刚回避了上一个问题——至少给一条"逼问"顺着这个回避继续 press。` : "",
+    `每问 8~26 字、开放犀利、口语、绝不剧透答案、不要编号或引号。`,
+    `只输出 JSON：{"qs":[{"q":"...","tag":"追问|逼问|用线索|反将"}]}`,
+  ].filter(Boolean).join("\n");
+  try {
+    const out = await callDeepSeek(sys, [{ role: "user", content: `给我 3-4 个审问 ${character} 的下一个问题（JSON）。` }], { maxTokens: 700, temperature: 0.8 });
+    const m = out.match(/\{[\s\S]*\}/);
+    const j = JSON.parse(m![0]);
+    const qs: FollowupQ[] = (j.qs ?? [])
+      .slice(0, 4)
+      .map((o: any) => ({ q: String(o.q ?? "").replace(/^[\s\-\d.、)）."'“”]+|["'“”\s]+$/g, "").slice(0, 40), tag: ["追问", "逼问", "用线索", "反将"].includes(o.tag) ? o.tag : "追问" }))
+      .filter((o: FollowupQ) => o.q.length >= 4);
+    return qs.length ? qs : fallback();
+  } catch {
+    return fallback();
+  }
 }

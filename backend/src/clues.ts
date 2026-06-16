@@ -27,7 +27,7 @@ const ACT_ORD: Record<string, number> = {
   第十幕: 11,
   结局演绎剧场: 12,
 };
-const actOrdOf = (name: string) => {
+export const actOrdOf = (name: string) => {
   const key = (name || "").trim();
   if (ACT_ORD[key] != null) return ACT_ORD[key];
   for (const k of Object.keys(ACT_ORD)) if (key.includes(k)) return ACT_ORD[k];

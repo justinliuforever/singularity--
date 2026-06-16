@@ -101,6 +101,17 @@ export interface ChatResult {
   kb: { beliefs: number; secrets: number; forbiddenTruths: number; systemPromptChars: number };
 }
 
+export interface FollowupQ { q: string; tag: string }
+export async function fetchFollowups(character: string, actName: string, messages: { role: "user" | "assistant"; content: string }[]): Promise<FollowupQ[]> {
+  try {
+    const r = await fetch(`${BASE}/followup`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ character, actName, messages }) });
+    const j = await r.json();
+    return Array.isArray(j.qs) ? j.qs : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchProbes(name: string, act: string): Promise<string[]> {
   try {
     const r = await fetch(`${BASE}/probe/${encodeURIComponent(name)}?act=${encodeURIComponent(act)}`);
