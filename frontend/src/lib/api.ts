@@ -103,6 +103,53 @@ export interface ChatResult {
   kb: { beliefs: number; secrets: number; forbiddenTruths: number; systemPromptChars: number };
 }
 
+// C1 同台对质
+export interface StageLine { speaker: string; text: string }
+export interface SceneTurnResult { speaker: string; text: string; grounding: Grounding; replyLeaked: boolean }
+export async function sceneTurn(actName: string, present: string[], transcript: StageLine[], speaker: string): Promise<SceneTurnResult> {
+  const r = await fetch(`${BASE}/scene/turn`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript, speaker }) });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+export async function sceneDirector(actName: string, present: string[], transcript: StageLine[]): Promise<{ speaker: string; reason: string }> {
+  try {
+    const r = await fetch(`${BASE}/scene/director`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript }) });
+    return await r.json();
+  } catch {
+    return { speaker: present[0] ?? "", reason: "" };
+  }
+}
+export async function sceneSuggest(actName: string, present: string[], transcript: StageLine[]): Promise<string[]> {
+  try {
+    const r = await fetch(`${BASE}/scene/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript }) });
+    const j = await r.json();
+    return Array.isArray(j.qs) ? j.qs : [];
+  } catch {
+    return [];
+  }
+}
+export interface CastInfo { name: string; goal: string; perceives: string; secrets: string[]; falseBeliefs: { belief: string; truth: string }[] }
+export async function sceneCast(actName: string, present: string[]): Promise<CastInfo[]> {
+  try {
+    const r = await fetch(`${BASE}/scene/cast`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present }) });
+    const j = await r.json();
+    return Array.isArray(j.cast) ? j.cast : [];
+  } catch {
+    return [];
+  }
+}
+export interface Tell { by: string; said: string; truth: string; tag: string; note: string }
+export async function sceneReferee(actName: string, present: string[], transcript: StageLine[]): Promise<Tell[]> {
+  try {
+    const r = await fetch(`${BASE}/scene/referee`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript }) });
+    const j = await r.json();
+    return Array.isArray(j.points) ? j.points : [];
+  } catch {
+    return [];
+  }
+}
+
 export interface FollowupQ { q: string; tag: string }
 export async function fetchFollowups(character: string, actName: string, messages: { role: "user" | "assistant"; content: string }[]): Promise<FollowupQ[]> {
   try {

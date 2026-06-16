@@ -85,7 +85,11 @@ export function loadKB(character: string, actName: string): KB {
   const secrets: { fact: string; reveal_if: string }[] = [];
   const secSec = section(kTxt, "secrets", ["goals_by_act", "perceives_by_act", "relationship_beliefs"]);
   for (const m of secSec.matchAll(/-\s*fact:\s*([\s\S]*?)(?=\n\s*-\s*fact:|$)/g)) {
-    const fact = stripReferee((m[1].match(/^([\s\S]*?)(?=\n\s*(?:hide_from|reveal_if|weight|note):)/)?.[1] ?? m[1])).replace(/\s+/g, " ").trim();
+    const fact = stripReferee((m[1].match(/^([\s\S]*?)(?=\n\s*(?:hide_from|reveal_if|weight|note):)/)?.[1] ?? m[1]))
+      .split("#")[0] // 截掉尾随的 yaml 注释块（# ---- / # goals_by_act…）
+      .split(/[一-龥]{2,4}认知[:：]/)[0] // 截掉 "X认知:" 裁判注释
+      .replace(/\s+/g, " ")
+      .trim();
     const reveal_if = (m[1].match(/reveal_if:\s*([^\n]+)/)?.[1] ?? "").trim();
     if (fact) {
       secrets.push({ fact, reveal_if });
@@ -126,7 +130,7 @@ function escapeRe(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function buildSystemPrompt(kb: KB, actName: string, opts?: { tension?: string }): string {
+export function buildSystemPrompt(kb: KB, actName: string, opts?: { tension?: string; stage?: { present: string[]; transcript: { speaker: string; text: string }[] } }): string {
   const sec = kb.secrets.length
     ? kb.secrets.map((s, i) => `${i + 1}. ${s.fact}${s.reveal_if ? `（触发条件：${s.reveal_if}）` : ""}`).join("\n")
     : "（无特别保密项）";
@@ -152,12 +156,17 @@ export function buildSystemPrompt(kb: KB, actName: string, opts?: { tension?: st
     kb.actGoals ? `你这一幕在意、想达成的事：${kb.actGoals}` : ``,
     opts?.tension ? `你此刻的情绪：${opts.tension}` : ``,
     ``,
+    opts?.stage ? `# 同台·此刻当众对质` : ``,
+    opts?.stage ? `在场的还有：${opts.stage.present.join("、")}。这是一场几个人当面对峙——你都听得见。` : ``,
+    opts?.stage && opts.stage.transcript.length ? `台上刚刚的对话：\n${opts.stage.transcript.slice(-12).map((t) => `${t.speaker}：${t.text}`).join("\n")}` : ``,
+    opts?.stage ? `` : ``,
     `# 铁律（必须遵守）`,
     `1. 始终以 ${kb.character} 的第一人称、用你的语气和情绪说话；绝不出戏，绝不提"AI / 剧本 / 系统 / 上帝视角 / 玩家"等字眼。`,
     `2. 你的世界里【不存在】任何"你并不知道的真相"。若被问到你认知之外的事，就按 ${kb.character} 会有的真实反应（困惑、岔开、情绪化、撒娇或回避）来回答——绝不编造设定，更不会揭穿任何你本不该知道的东西。`,
     `3. 回答要短、要有人物味道，像真人在对话，不要长篇大论、不要解释自己。`,
-    `4. 自然带出此刻场景里的动作与神态（点烟、踱步、停顿、把玩手中的线索…），并与你上一句的动作前后连贯；情绪可随被追问的压力变化，但始终只说 ${kb.character} 此刻会说的话。`,
+    `4. 你是有血有肉的人，正卷在一场生死攸关的对峙里——身体会自然流露你的情绪、算计与伤痛。动作神态用**括号、第三人称**写（不要带"我"，如"（冷笑，起身逼近）"），每一处都从此刻的人、物、处境里长出来、随对峙张力起伏；**别重复、别套路**——"轻笑一声""抬眼"这类用滥了就假。让肢体和台词一起演戏，真实、克制、有分量，点到为止。`,
     kb.actGoals ? `5. 你有自己的算计（见上"你这一幕在意、想达成的事"）——别只被动回答：在守住秘密的前提下主动推进，可以反问、试探、把话题引向对你有利的方向、必要时虚晃一枪。你是有目的的人，不是答录机。` : ``,
+    opts?.stage ? `6. 这是当众对质：针对刚才**谁说了什么**作出反应——回应、反驳、追问、甩锅、结盟都可以，紧扣你的目标、守住你的秘密。**一次只说你 ${kb.character} 这一轮的话（一两句 + 神态/动作），绝不替别人说话、绝不旁白别人。**` : ``,
   ]
     .filter(Boolean)
     .join("\n");

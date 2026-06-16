@@ -5,6 +5,8 @@ import { fetchGraph, fetchStory, fetchAudit, postPreview } from "./lib/api";
 import { useUI } from "./store";
 import { applyDraft } from "./lib/draft";
 import RelationLens from "./components/RelationLens";
+import StagePanel from "./components/StagePanel";
+import StageJudge from "./components/StageJudge";
 import StoryCanvas from "./components/StoryCanvas";
 import StoryDetail from "./components/StoryDetail";
 import EventDetail from "./components/EventDetail";
@@ -21,7 +23,7 @@ export default function App() {
   const [err, setErr] = useState<string | null>(null);
   const [actOpen, setActOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
-  const { mode, act, perspective, selEvent, detailStack, audit, applied, set, setAudit, enterChar, closeDetail } = useUI();
+  const { mode, act, perspective, selEvent, detailStack, audit, applied, liveStage, set, setAudit, setLiveStage, enterChar, closeDetail } = useUI();
   const detail = detailStack[detailStack.length - 1] ?? null;
   /** 本会话生效的故事图 = 原图 + 已应用改动（"保留"后整张图都反映它；刷新即还原，不写本子） */
   const eStory = useMemo(() => (story ? applyDraft(story, applied) : null), [story, applied]);
@@ -83,7 +85,13 @@ export default function App() {
               <Clapperboard size={13} /> 本幕 DM 流程
             </button>
             {mode === "scene" ? (
-              <span className="text-[10px] text-zinc-600">点关系网里的人 → 进入 TA 的视角</span>
+              <>
+                <div className="flex overflow-hidden rounded-lg border border-ink-700">
+                  <button onClick={() => setLiveStage(false)} className={`px-2.5 py-1.5 text-[11px] transition-colors ${!liveStage ? "bg-rose-500/20 text-rose-100" : "text-zinc-400 hover:text-zinc-200"}`}>单人审问</button>
+                  <button onClick={() => setLiveStage(true)} className={`px-2.5 py-1.5 text-[11px] transition-colors ${liveStage ? "bg-rose-500/20 text-rose-100" : "text-zinc-400 hover:text-zinc-200"}`}>同台对质</button>
+                </div>
+                <span className="text-[10px] text-zinc-600">{liveStage ? "选 2–4 人上台 · 你当导演" : "点关系网里的人 → 进入 TA 的视角"}</span>
+              </>
             ) : (
               <>
                 <button
@@ -99,7 +107,7 @@ export default function App() {
 
           <div className="relative min-h-0 flex-1">
             {mode === "scene" ? (
-              <RelationLens graph={graph} />
+              liveStage ? <StagePanel graph={graph} actName={curActName} portraitOf={portraitOf} /> : <RelationLens graph={graph} />
             ) : eStory ? (
               detail ? (
                 <StoryDetail story={eStory} portraitOf={portraitOf} />
@@ -117,7 +125,9 @@ export default function App() {
         {/* 右栏 */}
         <aside className="flex w-[384px] shrink-0 flex-col border-l border-ink-700 bg-ink-900">
           {mode === "scene" ? (
-            perspective !== "god" ? (
+            liveStage ? (
+              <StageJudge actName={curActName} />
+            ) : perspective !== "god" ? (
               <Dossier character={perspective} actName={curActName} act={act} slice={slice} portrait={portraitOf(perspective)} />
             ) : (
               <ScenePanel graph={graph} onEnter={enterChar} />

@@ -70,3 +70,14 @@ body {
 .slide-in-right {
   animation: slide-in-right 0.22s ease-out;
 }
+
+/* 同台·台词入场（淡入上浮） */
+@keyframes stage-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.stage-in { animation: stage-in 0.28s ease-out; }
+
+/* 打字光标 */
+@keyframes caret-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.caret { display: inline-block; width: 5px; margin-left: 1px; background: currentColor; animation: caret-blink 0.9s step-end infinite; }

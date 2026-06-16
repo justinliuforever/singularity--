@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { StoryEvent, StoryEdge } from "@liumang/shared";
-import type { Audit, Severity, PreviewResult } from "./lib/api";
+import type { Audit, Severity, PreviewResult, Grounding, Tell } from "./lib/api";
+
+/** C1 同台对质：台上一句话 */
+export interface StageTurn { speaker: string; text: string; grounding?: Grounding; replyLeaked?: boolean }
 
 /** 对现有事件的内容补丁（改标题/摘要/因果文字/角色…） */
 export type EventPatch = Partial<Pick<StoryEvent, "title" | "summary" | "effect" | "motive" | "type" | "actors" | "facts">>;
@@ -50,6 +53,26 @@ interface UIState {
   hoverChar: string | null;
   /** 创作者「窥视墙后」开关（现场模式·认知/审问 tab 共用）：开则显示假信念背后真相 + 测谎墙后项 */
   peekWall: boolean;
+  /** C1 同台对质 */
+  liveStage: boolean;
+  stageCast: string[];
+  stageTurns: StageTurn[];
+  /** 当前正在斟酌的发言人名（null=空闲） */
+  stageBusy: string | null;
+  /** 自动一轮进行中 */
+  stageRunning: boolean;
+  /** 导演台·建议问题 */
+  stageSuggest: string[];
+  /** C2 洞察·谁在瞒（嘴上 vs 实情） */
+  stageContradictions: Tell[];
+  setLiveStage: (b: boolean) => void;
+  toggleStageCast: (name: string) => void;
+  appendStageTurn: (t: StageTurn) => void;
+  setStageBusy: (s: string | null) => void;
+  setStageRunning: (b: boolean) => void;
+  setStageSuggest: (qs: string[]) => void;
+  setStageContradictions: (c: Tell[]) => void;
+  resetStage: () => void;
 
   /** 创作画布：选中/悬停的事件 */
   selEvent: string | null;
@@ -130,6 +153,13 @@ export const useUI = create<UIState>((set) => ({
   hoverFact: null,
   hoverChar: null,
   peekWall: false,
+  liveStage: false,
+  stageCast: [],
+  stageTurns: [],
+  stageBusy: null,
+  stageRunning: false,
+  stageSuggest: [],
+  stageContradictions: [],
   selEvent: null,
   hoverEvent: null,
   eventMode: "explore",
@@ -221,4 +251,12 @@ export const useUI = create<UIState>((set) => ({
   closeDetail: () => set({ detailStack: [] }),
   enterChar: (id) => set({ perspective: id, selFact: null }),
   setMode: (m) => set(m === "god" ? { mode: "god", perspective: "god", selFact: null } : { mode: "scene", selFact: null }),
+  setLiveStage: (b) => set(b ? { liveStage: true } : { liveStage: false, stageTurns: [], stageBusy: null, stageRunning: false, stageSuggest: [], stageContradictions: [] }),
+  toggleStageCast: (name) => set((s) => ({ stageCast: s.stageCast.includes(name) ? s.stageCast.filter((n) => n !== name) : s.stageCast.length >= 6 ? s.stageCast : [...s.stageCast, name] })),
+  appendStageTurn: (t) => set((s) => ({ stageTurns: [...s.stageTurns, t] })),
+  setStageBusy: (s2) => set({ stageBusy: s2 }),
+  setStageRunning: (b) => set({ stageRunning: b }),
+  setStageSuggest: (qs) => set({ stageSuggest: qs }),
+  setStageContradictions: (c) => set({ stageContradictions: c }),
+  resetStage: () => set({ stageTurns: [], stageBusy: null, stageRunning: false, stageSuggest: [], stageContradictions: [] }),
 }));

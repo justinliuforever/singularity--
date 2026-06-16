@@ -16,6 +16,7 @@ import { solveStory } from "./solver.js";
 import { previewEdit } from "./preview.js";
 import { suggestInserts, suggestEdit } from "./suggest.js";
 import { cascadeRewrite, cascadeScope } from "./cascade.js";
+import { sceneTurn, sceneDirector, sceneSuggest, sceneReferee, sceneCast, type StageLine } from "./scene.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv({ path: path.resolve(__dirname, "../../.env") });
@@ -100,6 +101,56 @@ app.get("/audit", async (c) => {
     const rank: Record<string, number> = { error: 0, warn: 1, info: 2 };
     const findings = [...a.findings, ...s.findings].sort((x, y) => rank[x.severity] - rank[y.severity]);
     return c.json({ findings, stats: { ...a.stats, temporal: s.temporal, unsolvable: s.unsolvable }, solver: s.solver });
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// C1 同台对质：让某角色在台上说下一句（迷雾 KB + 听到的对话）
+app.post("/scene/turn", async (c) => {
+  try {
+    const { actName, present, transcript, speaker } = await c.req.json<{ actName: string; present: string[]; transcript: StageLine[]; speaker: string }>();
+    return c.json(await sceneTurn({ actName: actName || "第三幕", present: present || [], transcript: transcript || [], speaker }));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// C1 导演：建议下一个该开口的人（启发式）
+app.post("/scene/director", async (c) => {
+  try {
+    const { actName, present, transcript } = await c.req.json<{ actName: string; present: string[]; transcript: StageLine[] }>();
+    return c.json(sceneDirector({ actName: actName || "第三幕", present: present || [], transcript: transcript || [] }));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// C1.5 导演台·建议问题
+app.post("/scene/suggest", async (c) => {
+  try {
+    const { actName, present, transcript } = await c.req.json<{ actName: string; present: string[]; transcript: StageLine[] }>();
+    return c.json(await sceneSuggest({ actName: actName || "第三幕", present: present || [], transcript: transcript || [] }));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// 裁判侧·在场各人盘算（无 LLM）
+app.post("/scene/cast", async (c) => {
+  try {
+    const { actName, present } = await c.req.json<{ actName: string; present: string[] }>();
+    return c.json(sceneCast({ actName: actName || "第三幕", present: present || [] }));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// C2 裁判·跨角色对质点
+app.post("/scene/referee", async (c) => {
+  try {
+    const { actName, present, transcript } = await c.req.json<{ actName: string; present: string[]; transcript: StageLine[] }>();
+    return c.json(await sceneReferee({ actName: actName || "第三幕", present: present || [], transcript: transcript || [] }));
   } catch (e: any) {
     return c.json({ error: String(e?.message ?? e) }, 500);
   }
