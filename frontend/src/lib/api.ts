@@ -92,6 +92,8 @@ export interface Grounding {
   drewOn: string[];
   knownFacts: number;
   wallFacts: number;
+  /** B2 测谎（创作者侧）：戳到的具体墙后项 */
+  wall?: { kind: "secret" | "false"; surface: string; truth: string };
 }
 
 export interface ChatResult {

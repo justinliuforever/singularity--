@@ -48,6 +48,8 @@ interface UIState {
   selFact: string | null;
   hoverFact: string | null;
   hoverChar: string | null;
+  /** 创作者「窥视墙后」开关（现场模式·认知/审问 tab 共用）：开则显示假信念背后真相 + 测谎墙后项 */
+  peekWall: boolean;
 
   /** 创作画布：选中/悬停的事件 */
   selEvent: string | null;
@@ -127,6 +129,7 @@ export const useUI = create<UIState>((set) => ({
   selFact: null,
   hoverFact: null,
   hoverChar: null,
+  peekWall: false,
   selEvent: null,
   hoverEvent: null,
   eventMode: "explore",

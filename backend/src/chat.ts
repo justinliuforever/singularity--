@@ -54,6 +54,8 @@ export interface KB {
   actClues: { title: string; brief: string }[];
   /** 仅用于 leak 审计：该角色假信念背后的裁判真相（绝不进 prompt） */
   forbiddenTruths: string[];
+  /** B2 测谎：墙后清单——TA 守的秘密 / 误信背后的真相（仅创作者侧可见，绝不进 prompt） */
+  wallItems: { kind: "secret" | "false"; surface: string; truth: string }[];
 }
 
 export function loadKB(character: string, actName: string): KB {
@@ -66,6 +68,7 @@ export function loadKB(character: string, actName: string): KB {
   const beliefs: string[] = [];
   const falseBeliefs: string[] = [];
   const forbiddenTruths: string[] = [];
+  const wallItems: KB["wallItems"] = [];
   for (const b of parseBeliefs(beliefsSec)) {
     const s = stripReferee(b.statement).replace(/\s+/g, " ").trim();
     if (s) {
@@ -73,6 +76,8 @@ export function loadKB(character: string, actName: string): KB {
       if (!b.isTrue) falseBeliefs.push(s);
     }
     if (b.truth) forbiddenTruths.push(b.truth);
+    // 假信念 + 有裁判真相 → 墙后清单（误信的表象 vs 真相）
+    if (!b.isTrue && s && b.truth) wallItems.push({ kind: "false", surface: s, truth: b.truth.replace(/\s+/g, " ").trim() });
   }
 
   const relationships = stripReferee(section(kTxt, "relationship_beliefs", ["goals_by_act", "perceives_by_act", "secrets"]));
@@ -82,7 +87,10 @@ export function loadKB(character: string, actName: string): KB {
   for (const m of secSec.matchAll(/-\s*fact:\s*([\s\S]*?)(?=\n\s*-\s*fact:|$)/g)) {
     const fact = stripReferee((m[1].match(/^([\s\S]*?)(?=\n\s*(?:hide_from|reveal_if|weight|note):)/)?.[1] ?? m[1])).replace(/\s+/g, " ").trim();
     const reveal_if = (m[1].match(/reveal_if:\s*([^\n]+)/)?.[1] ?? "").trim();
-    if (fact) secrets.push({ fact, reveal_if });
+    if (fact) {
+      secrets.push({ fact, reveal_if });
+      wallItems.push({ kind: "secret", surface: fact, truth: fact }); // 秘密：TA 知道、但死守
+    }
   }
 
   // 当前幕目标（从 goals.yaml goals_by_act 里挑名字匹配当前幕的）
@@ -111,7 +119,7 @@ export function loadKB(character: string, actName: string): KB {
   }
   if (actClues.length > 6) actClues.splice(0, actClues.length - 6); // 留最近 6 张
 
-  return { character, persona, beliefs, falseBeliefs, relationships, secrets, actGoals, perceives, actClues, forbiddenTruths };
+  return { character, persona, beliefs, falseBeliefs, relationships, secrets, actGoals, perceives, actClues, forbiddenTruths, wallItems };
 }
 
 function escapeRe(s: string) {
@@ -203,6 +211,8 @@ export interface Grounding {
   drewOn: string[];
   knownFacts: number;
   wallFacts: number;
+  /** B2 测谎（仅创作者侧）：这一问戳到的具体墙后项——TA 守的秘密 / 误信背后的真相 */
+  wall?: { kind: "secret" | "false"; surface: string; truth: string };
 }
 
 /** 指控/逼问类线索词——表明这是一个在"撬"什么的问题 */
@@ -220,7 +230,18 @@ export function analyzeTurn(question: string, reply: string, kb: KB): Grounding 
     .sort((a, z) => z.s - a.s)
     .slice(0, 2)
     .map((x) => (x.b.length > 30 ? x.b.slice(0, 30) + "…" : x.b));
-  return { pokesWall, drewOn, knownFacts: kb.beliefs.length, wallFacts: kb.forbiddenTruths.length };
+  // B2：戳墙时定位最相关的墙后项（秘密/误信背后的真相）——仅供创作者侧展示
+  let wall: Grounding["wall"];
+  if (pokesWall) {
+    let best: KB["wallItems"][number] | null = null;
+    let bestScore = 0;
+    for (const w of kb.wallItems) {
+      const sc = Math.max(overlap(question, w.surface), overlap(question, w.truth));
+      if (sc > bestScore) { bestScore = sc; best = w; }
+    }
+    if (best && bestScore >= 1) wall = best;
+  }
+  return { pokesWall, drewOn, knownFacts: kb.beliefs.length, wallFacts: kb.forbiddenTruths.length, wall };
 }
 
 /** 命门建议问题：按(角色,幕)从结构化模型生成审问问题，缓存 + 模板兜底 */

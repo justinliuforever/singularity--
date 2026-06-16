@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Eye, EyeOff, BookOpen, Target, Brain, MessageCircle, ScrollText, ChevronDown } from "lucide-react";
 import { fetchCharacter, type Dossier as Dos, type Clue } from "../lib/api";
 import type { Slice } from "@liumang/shared";
+import { useUI } from "../store";
 import ChatPanel from "./ChatPanel";
 import Markdownish from "./Markdownish";
 
@@ -16,7 +17,7 @@ const TABS = [
 export default function Dossier({ character, actName, act, slice, portrait }: { character: string; actName: string; act: number; slice: Slice; portrait?: string | null }) {
   const [tab, setTab] = useState<string>("线索");
   const [d, setD] = useState<Dos | null>(null);
-  const [peek, setPeek] = useState(false);
+  const { peekWall: peek, set } = useUI();
 
   useEffect(() => {
     setD(null);
@@ -111,7 +112,7 @@ export default function Dossier({ character, actName, act, slice, portrait }: { 
                     认知边界：<span className="text-know">{d.knownCount} 知</span> · <span className="text-rose-300">{d.falseCount} 误信</span> · <span className="text-amber-300">{d.secrets.length} 守秘</span>
                   </div>
                   <button
-                    onClick={() => setPeek((v) => !v)}
+                    onClick={() => set({ peekWall: !peek })}
                     className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] transition-colors ${peek ? "bg-amber-500/20 text-amber-200" : "bg-ink-700 text-zinc-400 hover:text-zinc-200"}`}
                   >
                     {peek ? <Eye size={11} /> : <EyeOff size={11} />} 窥视墙后

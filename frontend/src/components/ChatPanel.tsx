@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect } from "react";
-import { Send, ShieldCheck, Loader2, BrickWall, Sparkles, Lightbulb, RotateCcw } from "lucide-react";
+import { Send, ShieldCheck, Loader2, BrickWall, Sparkles, Lightbulb, RotateCcw, Eye, EyeOff } from "lucide-react";
 import { chat, fetchProbes, fetchFollowups, type ChatResult, type Grounding, type FollowupQ } from "../lib/api";
 import type { Slice } from "@liumang/shared";
+import { useUI } from "../store";
 
 type Msg = { role: "user" | "assistant"; content: string; grounding?: Grounding };
 
@@ -17,6 +18,7 @@ export default function ChatPanel({ character, actName, slice }: { character: st
   const [err, setErr] = useState<string | null>(null);
   const [probes, setProbes] = useState<FollowupQ[]>([]);
   const [probing, setProbing] = useState(true);
+  const { peekWall, set } = useUI();
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,7 +67,10 @@ export default function ChatPanel({ character, actName, slice }: { character: st
       <div className="flex items-center gap-2 border-b border-ink-700 bg-ink-850 px-3 py-2 text-[10px]">
         <ShieldCheck size={13} className={audit && !audit.leaked ? "text-reveal" : "text-zinc-500"} />
         <span className="text-zinc-400">审问 <b className="text-rose-200">{character}</b> · {actName}</span>
-        <span className="ml-auto text-zinc-500">TA 只知 <b className="text-know">{slice.stats.knownFacts}</b> · 墙后 <b className="text-rose-300">{slice.stats.hidden}</b> 条<b>看不到</b></span>
+        <button onClick={() => set({ peekWall: !peekWall })} title="创作者侧：戳墙时显示 TA 死守的秘密 / 误信背后的真相" className={`ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] transition-colors ${peekWall ? "bg-amber-500/20 text-amber-200" : "bg-ink-700 text-zinc-500 hover:text-zinc-300"}`}>
+          {peekWall ? <Eye size={10} /> : <EyeOff size={10} />} 窥视墙后
+        </button>
+        <span className="text-zinc-500">TA 只知 <b className="text-know">{slice.stats.knownFacts}</b> · 墙后 <b className="text-rose-300">{slice.stats.hidden}</b> <b>看不到</b></span>
       </div>
       {audit && (
         <div className={`px-3 py-1 text-[10px] ${audit.leaked ? "bg-rose-500/15 text-rose-200" : "bg-emerald-500/10 text-emerald-200"}`}>
@@ -137,14 +142,25 @@ function TagChip({ tag }: { tag: string }) {
   return <span className="shrink-0 rounded px-1 py-0.5 text-[8px] font-bold" style={{ background: `${c}22`, color: c }}>{tag}</span>;
 }
 
-/** 每句回答下方：戳没戳墙 + 依据了哪些认知 */
+/** 每句回答下方：戳没戳墙 + 依据了哪些认知（+ 创作者侧测谎墙后真相） */
 function GroundStrip({ g, character }: { g: Grounding; character: string }) {
+  const peekWall = useUI((s) => s.peekWall);
   return (
     <div className="mt-1 max-w-[88%] space-y-1">
       {g.pokesWall && (
         <div className="flex items-start gap-1.5 rounded-md border border-rose-400/40 bg-rose-500/10 px-2 py-1 text-[10px] text-rose-200">
           <BrickWall size={12} className="mt-0.5 shrink-0" />
           <span>这一问触到了 {character} 的<b>隔离墙</b>——背后的真相从未进入 TA 的上下文，TA 结构上无法承认，只能回避。</span>
+        </div>
+      )}
+      {g.pokesWall && peekWall && g.wall && (
+        <div className="flex items-start gap-1.5 rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">
+          <Eye size={12} className="mt-0.5 shrink-0" />
+          {g.wall.kind === "secret" ? (
+            <span><b>创作者侧</b> · TA 正死守的秘密：「{g.wall.surface}」——你看着 TA 把它咽下去。</span>
+          ) : (
+            <span><b>创作者侧</b> · TA 误信「{g.wall.surface}」，墙后真相：<b className="text-amber-100">「{g.wall.truth}」</b>——TA 永远看不到。</span>
+          )}
         </div>
       )}
       {g.drewOn.length > 0 && (
