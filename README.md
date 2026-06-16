@@ -40,7 +40,7 @@
 
 ```
 frontend/   Vite + React 19 + React Flow + elkjs + 自绘 SVG + Tailwind + Zustand   纯 UI
-backend/    Node + Hono                                                          图编译/查询 + 对话(DeepSeek) + 线索 + 故事图
+backend/    Node + Hono                                                          图编译/查询 + 对话(LLM) + 线索 + 故事图
 shared/     Zod schema + sliceGraph(G(幕,视角)) + StoryGraph                      前后端单一事实源
 digitized/  数据（流氓叙事，已全本数字化）+ _ocr（OCR 文本）+ 08_story（事件因果层）
 ```
@@ -50,13 +50,13 @@ digitized/  数据（流氓叙事，已全本数字化）+ _ocr（OCR 文本）+
 - **防泄漏** `backend/src/chat.ts`：`knowledge.yaml` → system prompt，剥离裁判真相 + leak 审计；**命门建议问题** + **每句回答挂依据/墙后**。
 - **线索内容** `backend/src/clues.ts`：`clues.csv` 元数据接上 `_ocr/线索/*.pages.json` 的真实卡面文字。
 - **认知卡** `backend/src/dossier.ts`：角色人设/信念/秘密/关系/目标/线索/本幕正文。
-- **LLM**：DeepSeek（`deepseek-chat`=flash，可在 `.env` 切 `deepseek-reasoner`=pro）。
+- **LLM**：商用对话模型（OpenAI 兼容端点直连，`.env` 配置，可替换）。
 
 ---
 
 ## 运行
 
-前置：Node 22 + pnpm（已装）。`.env` 已含 DeepSeek key（不入库）。
+前置：Node 22 + pnpm（已装）。`.env` 已含 LLM key（不入库）。
 
 ```bash
 pnpm install            # 安装依赖
