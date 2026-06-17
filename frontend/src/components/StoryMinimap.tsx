@@ -8,7 +8,6 @@ const CELL_W = 22;
 const CELL_H = 17;
 const HEAD = 16;
 
-// 幕短名
 const SHORT: Record<string, string> = { 序幕: "序", 第一幕: "1", 第二幕: "2", 第三幕: "3", 第四幕: "4", 第五幕: "5", 第六幕: "6", 第七幕: "7", 无声之旅: "无声", 无所容心: "无容", 第十幕: "10", 结局演绎剧场: "结局" };
 
 /** 故事全景图 ·「你在这里」——角色×幕 在场格子，高亮当前详图覆盖的范围（不是散点，看得清） */
@@ -62,11 +61,9 @@ export default function StoryMinimap({ story, highlight, caption, portraitOf }: 
       </div>
       <div className="mb-1.5 truncate rounded bg-accent/10 px-1.5 py-1 text-[10px] text-accent-soft">{caption}</div>
       <svg width={gridW} height={HEAD + lanes.length * CELL_H} className="block">
-        {/* 幕表头 */}
         {cols.map((c, j) => (
           <text key={j} x={LABEL_W + j * CELL_W + CELL_W / 2} y={HEAD / 2} textAnchor="middle" dominantBaseline="central" fontSize={8} fill={c.ord == null ? "#52525b" : "#71717a"}>{c.label}</text>
         ))}
-        {/* 行 */}
         {lanes.map((ch, i) => {
           const y = HEAD + i * CELL_H;
           const laneLit = cols.some((_, j) => (cells.get(`${i}|${j}`)?.lit ?? 0) > 0);
@@ -74,7 +71,6 @@ export default function StoryMinimap({ story, highlight, caption, portraitOf }: 
             <g key={ch}>
               {/* 该泳道若被聚焦，整行底纹 */}
               {laneLit && <rect x={LABEL_W} y={y} width={cols.length * CELL_W} height={CELL_H} fill="#8b5cf6" opacity={0.07} />}
-              {/* 头像 + 名 */}
               <clipPath id={`mm-${i}`}><circle cx={9} cy={y + CELL_H / 2} r={6} /></clipPath>
               {portraitOf(ch) ? (
                 <image href={portraitOf(ch)!} x={3} y={y + CELL_H / 2 - 6} width={12} height={12} clipPath={`url(#mm-${i})`} preserveAspectRatio="xMidYMid slice" />
@@ -82,7 +78,6 @@ export default function StoryMinimap({ story, highlight, caption, portraitOf }: 
                 <circle cx={9} cy={y + CELL_H / 2} r={6} fill="#272a37" />
               )}
               <text x={19} y={y + CELL_H / 2} dominantBaseline="central" fontSize={8.5} fill={laneLit ? "#ddd6fe" : "#71717a"}>{ch.slice(0, 4)}</text>
-              {/* 在场格子 */}
               {cols.map((_, j) => {
                 const c = cells.get(`${i}|${j}`);
                 if (!c || c.total === 0) return null;

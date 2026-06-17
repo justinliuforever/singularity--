@@ -70,7 +70,6 @@ export default function CognitionDrawer({ cog, loading }: { cog: CognitionResult
 
   return (
     <div className="slide-in-right absolute right-0 top-0 bottom-0 z-30 flex w-[372px] max-w-[82%] flex-col border-l border-accent/40 bg-ink-900/97 shadow-2xl backdrop-blur">
-      {/* 头 */}
       <div className="flex items-center gap-2 border-b border-ink-700 px-4 py-3">
         <Brain size={16} className="text-accent-soft" />
         <div className="text-[12px] font-semibold text-zinc-100">认知影响面</div>
@@ -78,7 +77,6 @@ export default function CognitionDrawer({ cog, loading }: { cog: CognitionResult
         <button onClick={() => setCognitionOpen(false)} className="ml-auto text-zinc-500 hover:text-zinc-200"><X size={15} /></button>
       </div>
 
-      {/* 体 */}
       <div className="min-h-[160px] flex-1 overflow-y-auto px-4 py-3">
         {loading && !cog ? (
           <div className="flex items-center justify-center gap-2 py-12 text-[11px] text-accent-soft"><Loader2 size={15} className="animate-spin" /> 沿事件 × 事实派生认知影响…</div>
@@ -113,7 +111,6 @@ export default function CognitionDrawer({ cog, loading }: { cog: CognitionResult
         )}
       </div>
 
-      {/* 脚 */}
       <div className="flex items-center gap-1.5 border-t border-ink-700 px-4 py-2.5 text-[9.5px] text-zinc-600">
         <ShieldCheck size={11} className="shrink-0 text-emerald-300" />
         <span>由事件 actors + 携带事实确定性派生（未调模型）。重算每角色 KB、让 agent 认知当场变 = 下一程。</span>

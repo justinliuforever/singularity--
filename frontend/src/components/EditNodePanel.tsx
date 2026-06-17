@@ -77,7 +77,6 @@ export default function EditNodePanel({ story }: { story: StoryGraph }) {
             <textarea value={effect} onChange={(e) => setEffect(e.target.value)} rows={2} className="w-full resize-none rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-[11px] leading-relaxed text-zinc-300 outline-none placeholder:text-zinc-600 focus:border-sky-400/60" placeholder="（可选）" />
           </Field>
 
-          {/* AI 帮我改 */}
           <div className="rounded-lg border border-amber-400/30 bg-amber-400/5">
             <button onClick={() => { setAiOpen((v) => !v); if (!aiOpen && !aiOptions.length && !aiLoading) gen(); }} className="flex w-full items-center gap-1.5 px-3 py-2 text-[11px] text-amber-200">
               <Wand2 size={13} /> <b>AI 帮我改这一拍</b>

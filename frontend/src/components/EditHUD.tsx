@@ -39,7 +39,6 @@ export default function EditHUD({ affectedCount = 0, cognCount = 0 }: { affected
         <button onClick={() => { clearDraft(); set({ editing: false }); }} className="ml-auto text-zinc-500 hover:text-zinc-200" title="退出改本（丢弃未应用的改动）"><X size={14} /></button>
       </div>
 
-      {/* 主体 */}
       <div className="px-3 py-2.5">
         {dirty && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -64,7 +63,6 @@ export default function EditHUD({ affectedCount = 0, cognCount = 0 }: { affected
         )}
       </div>
 
-      {/* 操作 */}
       {dirty && (
         <div className="flex items-center gap-2 border-t border-ink-700 px-3 py-2">
           <button onClick={clearDraft} className="flex items-center gap-1 rounded-lg border border-ink-700 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:border-rose-400/50 hover:text-rose-200" title="放弃这次改动，回到改本前"><RotateCcw size={12} /> 撤销改动</button>

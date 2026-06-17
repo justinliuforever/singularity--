@@ -46,14 +46,14 @@ export default function ChatPanel({ character, actName, slice }: { character: st
     setInput("");
     setLoading(true);
     setErr(null);
-    setProbes([]); // 旧建议先清掉
+    setProbes([]);
     try {
       const r = await chat(character, actName, next.map(({ role, content }) => ({ role, content })));
       const final: Msg[] = [...next, { role: "assistant", content: r.reply, grounding: r.grounding }];
       setMsgs(final);
       setAudit(r.audit);
       setKb(r.kb);
-      refreshSuggest(final); // 异步刷新追问建议
+      refreshSuggest(final);
     } catch (e: any) {
       setErr(String(e.message ?? e));
     } finally {
@@ -78,7 +78,6 @@ export default function ChatPanel({ character, actName, slice }: { character: st
         </div>
       )}
 
-      {/* 消息 */}
       <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
         {msgs.length === 0 && (
           <div className="space-y-2 pt-1">
@@ -128,7 +127,6 @@ export default function ChatPanel({ character, actName, slice }: { character: st
         </div>
       )}
 
-      {/* 输入 */}
       <div className="flex items-center gap-2 border-t border-ink-700 p-2.5">
         <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send(input)} placeholder={`审问 ${character}…`} className="flex-1 rounded-lg border border-ink-700 bg-ink-850 px-3 py-1.5 text-[12px] text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-accent/60" />
         <button onClick={() => send(input)} disabled={loading} className="grid h-8 w-8 place-items-center rounded-lg bg-accent/80 text-white transition-colors hover:bg-accent disabled:opacity-40"><Send size={14} /></button>

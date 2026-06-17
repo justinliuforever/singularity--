@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Pencil, X, Loader2, Trash2, ArrowRight, Plus } from "lucide-react";
+import { Sparkles, Pencil, X, Trash2, ArrowRight, Plus } from "lucide-react";
 import type { StoryGraph } from "@liumang/shared";
 import { useUI } from "../store";
 import { suggestInserts, type SuggestOption } from "../lib/api";
@@ -51,7 +51,6 @@ export default function InsertPanel({ story }: { story: StoryGraph }) {
   return (
     <div className="absolute inset-0 z-30 grid place-items-center bg-black/50 backdrop-blur-sm" onClick={() => setPendingEdge(null)}>
       <div className="w-[520px] max-w-[92%] rounded-2xl border border-accent/40 bg-ink-900 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        {/* 头：缺口上下文 */}
         <div className="flex items-center gap-2 border-b border-ink-700 px-4 py-3">
           <Plus size={15} className="text-accent-soft" />
           <div className="min-w-0 text-[11px] text-zinc-400">
@@ -60,7 +59,6 @@ export default function InsertPanel({ story }: { story: StoryGraph }) {
           <button onClick={() => setPendingEdge(null)} className="ml-auto text-zinc-500 hover:text-zinc-200"><X size={15} /></button>
         </div>
 
-        {/* 模式切换 */}
         <div className="flex gap-1 border-b border-ink-700 px-3 py-2">
           <Tab active={tab === "ai"} onClick={() => setTab("ai")} icon={<Sparkles size={12} />}>🪄 AI 编剧提议</Tab>
           <Tab active={tab === "manual"} onClick={() => setTab("manual")} icon={<Pencil size={12} />}>✍️ 自己写</Tab>
@@ -100,7 +98,6 @@ export default function InsertPanel({ story }: { story: StoryGraph }) {
           )}
         </div>
 
-        {/* 底：删边 */}
         <div className="flex items-center gap-2 border-t border-ink-700 px-4 py-2">
           <button onClick={() => draftRemoveEdge(from!, to!)} className="flex items-center gap-1 rounded-lg border border-rose-400/40 px-2.5 py-1.5 text-[10.5px] text-rose-200 hover:bg-rose-500/10"><Trash2 size={12} /> 删除这条因果（看下游崩不崩）</button>
           <span className="ml-auto text-[9px] text-zinc-600">AI 只提议，影响范围与是否自洽由引擎+求解器判</span>

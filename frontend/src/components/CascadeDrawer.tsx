@@ -59,7 +59,6 @@ export default function CascadeDrawer({ story }: { story: StoryGraph }) {
 
   return (
     <div className="slide-in-right absolute right-0 top-0 bottom-0 z-30 flex w-[372px] max-w-[82%] flex-col border-l border-amber-400/40 bg-ink-900/97 shadow-2xl backdrop-blur">
-        {/* 头 */}
         <div className="flex items-center gap-2 border-b border-ink-700 px-4 py-3">
           <Wand2 size={16} className="text-amber-300" />
           <div className="text-[12px] font-semibold text-zinc-100">下游连锁改写</div>
@@ -67,7 +66,6 @@ export default function CascadeDrawer({ story }: { story: StoryGraph }) {
           <button onClick={() => setCascadeOpen(false)} className="ml-auto text-zinc-500 hover:text-zinc-200"><X size={15} /></button>
         </div>
 
-        {/* 体 */}
         <div className="min-h-[160px] flex-1 overflow-y-auto px-4 py-3">
           {err ? (
             <div className="py-10 text-center text-[12px] text-zinc-500">连锁分析失败。<button onClick={() => { fetchedFor.current = ""; setCascadeOpen(false); setTimeout(() => setCascadeOpen(true), 0); }} className="text-accent-soft underline">重试</button></div>
@@ -130,7 +128,6 @@ export default function CascadeDrawer({ story }: { story: StoryGraph }) {
           )}
         </div>
 
-        {/* 脚 */}
         <div className="flex items-center gap-2 border-t border-ink-700 px-4 py-2.5">
           <span className="flex items-center gap-1 text-[9.5px] text-zinc-600"><ShieldCheck size={11} className="text-emerald-300" /> 接受后求解器会对整条链重新盖章</span>
           {actionable.length > 0 && <span className="text-[10px] text-zinc-400">已接受 <b className="text-emerald-200">{acceptedCount}</b>/{actionable.length}</span>}

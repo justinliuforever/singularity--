@@ -12,7 +12,6 @@ import { applyDelta, type EditDelta } from "./preview.js";
 import { cascadeScope } from "./cascade.js";
 
 export type CogRel = "actor" | "knows" | "false" | "hide";
-export const COG_REL_LABEL: Record<CogRel, string> = { actor: "在场/参与", knows: "知道", false: "误信", hide: "守秘" };
 
 export interface CogFact {
   id: string;

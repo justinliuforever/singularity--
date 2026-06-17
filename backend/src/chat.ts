@@ -159,7 +159,6 @@ export function buildSystemPrompt(kb: KB, actName: string, opts?: { tension?: st
     opts?.stage ? `# 同台·此刻当众对质` : ``,
     opts?.stage ? `在场的还有：${opts.stage.present.join("、")}。这是一场几个人当面对峙——你都听得见。` : ``,
     opts?.stage && opts.stage.transcript.length ? `台上刚刚的对话：\n${opts.stage.transcript.slice(-12).map((t) => `${t.speaker}：${t.text}`).join("\n")}` : ``,
-    opts?.stage ? `` : ``,
     `# 铁律（必须遵守）`,
     `1. 始终以 ${kb.character} 的第一人称、用你的语气和情绪说话；绝不出戏，绝不提"AI / 剧本 / 系统 / 上帝视角 / 玩家"等字眼。`,
     `2. 你的世界里【不存在】任何"你并不知道的真相"。若被问到你认知之外的事，就按 ${kb.character} 会有的真实反应（困惑、岔开、情绪化、撒娇或回避）来回答——绝不编造设定，更不会揭穿任何你本不该知道的东西。`,

@@ -44,7 +44,6 @@ export default function CharacterForge({ onClose }: { onClose: () => void }) {
   return (
     <div className="absolute inset-0 z-30 flex justify-center bg-black/55 backdrop-blur-sm" onClick={onClose}>
       <div className="mt-6 flex h-[calc(100%-3rem)] w-[760px] max-w-[94%] flex-col rounded-t-2xl border border-ink-700 bg-ink-900 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        {/* 头 */}
         <div className="flex items-center gap-2 border-b border-ink-700 px-4 py-3">
           <UserPlus size={16} className="text-accent-soft" />
           <div className="text-[13px] font-semibold text-zinc-100">加人物 · 命名充实</div>
@@ -52,7 +51,6 @@ export default function CharacterForge({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="ml-auto text-zinc-500 hover:text-zinc-200"><X size={15} /></button>
         </div>
 
-        {/* 本会话已加入 */}
         {sessionChars.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 border-b border-ink-700 bg-emerald-500/5 px-4 py-1.5 text-[10px]">
             <span className="text-emerald-300/90">本会话已落进关系网（{sessionChars.length}）：</span>
@@ -66,7 +64,6 @@ export default function CharacterForge({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {/* 输入条 */}
         <div className="flex items-center gap-2 border-b border-ink-700 bg-ink-850/50 px-4 py-2.5">
           <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && run()} placeholder="角色名（可留空让 AI 起名）"
             className="w-44 rounded-lg border border-ink-700 bg-ink-900 px-2.5 py-1.5 text-[12px] text-zinc-100 outline-none focus:border-accent/60" />
@@ -77,7 +74,6 @@ export default function CharacterForge({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* 体 */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {!res && !loading && !err && (
             <div className="grid h-full place-items-center text-center text-[12px] text-zinc-500">
@@ -93,7 +89,6 @@ export default function CharacterForge({ onClose }: { onClose: () => void }) {
 
           {d && (
             <div className={`space-y-3.5 ${loading ? "opacity-50" : ""}`}>
-              {/* 名 + 钩子 */}
               <div className="rounded-xl border border-accent/40 bg-accent/5 px-3.5 py-2.5">
                 <div className="flex items-baseline gap-2">
                   <b className="text-[15px] text-zinc-50">{d.name}</b>
@@ -188,7 +183,6 @@ export default function CharacterForge({ onClose }: { onClose: () => void }) {
                 </div>
               )}
 
-              {/* 框定提示 */}
               {res!.warnings.length > 0 && (
                 <div className="rounded-lg border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-[10.5px] text-amber-200">
                   <div className="mb-0.5 flex items-center gap-1 font-medium"><AlertTriangle size={11} /> 引擎框定（{res!.warnings.length}）</div>
@@ -199,7 +193,6 @@ export default function CharacterForge({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {/* 脚 */}
         {d && (
           <div className="flex items-center gap-2 border-t border-ink-700 px-4 py-2.5">
             {accepted || alreadyIn ? (

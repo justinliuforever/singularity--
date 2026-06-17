@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import type { StoryGraph, StoryEvent } from "@liumang/shared";
 import { useUI } from "../store";
 
-// 布局常量
 const LABEL_W = 118;
 const HEADER_H = 32;
 const COL_W = 208;
@@ -11,7 +10,6 @@ const CARD_H = 60;
 const CARD_GAP = 8;
 const LANE_PAD = 12;
 
-// 事件类型 → 颜色（左色条 + 文字色）
 const TYPE_COLOR: Record<string, string> = {
   Event: "#60a5fa",
   Decision: "#a78bfa",
@@ -25,7 +23,6 @@ const TYPE_COLOR: Record<string, string> = {
 const TYPE_LABEL: Record<string, string> = {
   Event: "事件", Decision: "决定", Lie: "谎言/欺骗", Reveal: "揭露", RelationChange: "关系变化", Outcome: "结局", Perception: "感知", Goal: "目标",
 };
-// 因果边类型 → 颜色
 const EDGE_COLOR: Record<string, string> = {
   causes: "#94a3b8", motivates: "#a78bfa", enables: "#64748b", reveals: "#34d399", depends_on: "#f59e0b", contradicts: "#fb7185",
 };
@@ -36,7 +33,6 @@ export default function StoryCanvas({ story, portraitOf, newChars }: { story: St
   const isNewChar = (c: string) => !!newChars?.has(c);
 
   const { lanes, cols, pos, W, H } = layout;
-  const evById = new Map(story.events.map((e) => [e.id, e]));
   const focus = perspective !== "god" ? perspective : null;
   const involves = (e: StoryEvent, c: string) => e.actors.some((a) => a.char === c);
 
@@ -52,19 +48,16 @@ export default function StoryCanvas({ story, portraitOf, newChars }: { story: St
       <div className="relative" style={{ width: W, height: H }}>
         {/* SVG：泳道底纹 + 幕分隔 + 因果边 */}
         <svg width={W} height={H} className="absolute left-0 top-0" style={{ pointerEvents: "none" }}>
-          {/* 泳道底纹 */}
           {lanes.map((ln, i) => {
             const lit = focus === ln.char;
             return <rect key={ln.char} x={0} y={ln.top} width={W} height={ln.height} fill={lit ? "#fb7185" : i % 2 ? "#0f1015" : "#0c0d12"} opacity={lit ? 0.08 : 1} />;
           })}
-          {/* 幕分隔竖线 + 顶栏底 */}
           {cols.map((col, j) => (
             <line key={col.key} x1={LABEL_W + j * COL_W} y1={0} x2={LABEL_W + j * COL_W} y2={H} stroke="#1b1d26" strokeWidth={1} />
           ))}
           <line x1={LABEL_W} y1={HEADER_H} x2={W} y2={HEADER_H} stroke="#272a37" strokeWidth={1} />
           <line x1={LABEL_W} y1={0} x2={LABEL_W} y2={H} stroke="#272a37" strokeWidth={1} />
 
-          {/* 因果边 */}
           {story.edges.map((ed, i) => {
             const a = pos.get(ed.from);
             const b = pos.get(ed.to);
@@ -95,7 +88,6 @@ export default function StoryCanvas({ story, portraitOf, newChars }: { story: St
           </button>
         ))}
 
-        {/* 泳道标签（角色） */}
         {lanes.map((ln) => {
           const lit = focus === ln.char;
           const portrait = ln.char.startsWith("__") ? null : portraitOf(ln.char);
@@ -123,7 +115,6 @@ export default function StoryCanvas({ story, portraitOf, newChars }: { story: St
           );
         })}
 
-        {/* 事件卡片 */}
         {story.events.map((e) => {
           const p = pos.get(e.id);
           if (!p) return null;
@@ -160,7 +151,6 @@ export default function StoryCanvas({ story, portraitOf, newChars }: { story: St
         })}
       </div>
 
-      {/* 图例 */}
       <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap items-center gap-2 rounded-lg border border-ink-700 bg-ink-900/90 px-2.5 py-1 text-[9px] text-zinc-500 backdrop-blur">
         <span className="text-zinc-400">事件:</span>
         {(["Event", "Decision", "Lie", "Reveal", "RelationChange"] as const).map((t) => (

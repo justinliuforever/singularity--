@@ -173,14 +173,6 @@ export async function sceneTurn(actName: string, present: string[], transcript: 
   if (j.error) throw new Error(j.error);
   return j;
 }
-export async function sceneDirector(actName: string, present: string[], transcript: StageLine[]): Promise<{ speaker: string; reason: string }> {
-  try {
-    const r = await fetch(`${BASE}/scene/director`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript }) });
-    return await r.json();
-  } catch {
-    return { speaker: present[0] ?? "", reason: "" };
-  }
-}
 export async function sceneSuggest(actName: string, present: string[], transcript: StageLine[]): Promise<string[]> {
   try {
     const r = await fetch(`${BASE}/scene/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript }) });

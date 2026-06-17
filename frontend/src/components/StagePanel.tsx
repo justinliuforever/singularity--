@@ -96,7 +96,6 @@ export default function StagePanel({ graph, actName, portraitOf }: { graph: Grap
     );
   };
 
-  // —— 选角 ——
   if (!started) {
     return (
       <div className="grid h-full place-items-center bg-ink-950 p-6">
@@ -123,10 +122,8 @@ export default function StagePanel({ graph, actName, portraitOf }: { graph: Grap
     );
   }
 
-  // —— 舞台 ——
   return (
     <div className="flex h-full flex-col bg-ink-950">
-      {/* 在场条 */}
       <div className="flex items-center gap-2 border-b border-ink-700 bg-ink-900/60 px-3 py-2">
         <span className="text-[10px] text-zinc-500">在场 · {actName}</span>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -144,7 +141,6 @@ export default function StagePanel({ graph, actName, portraitOf }: { graph: Grap
         <button onClick={() => { resetStage(); setStarted(false); }} className="ml-auto flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-200"><RotateCcw size={11} /> 重开/换人</button>
       </div>
 
-      {/* 对话流 */}
       <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-3">
         {stageTurns.length === 0 && <div className="pt-6 text-center text-[11px] text-zinc-600">抛一个问题（或点下面的建议），台上就开始自动对撞。</div>}
         {stageTurns.map((t, i) => {
@@ -169,7 +165,6 @@ export default function StagePanel({ graph, actName, portraitOf }: { graph: Grap
         <div ref={bottom} />
       </div>
 
-      {/* 导演台 */}
       <div className="border-t border-ink-700 bg-ink-900/60 px-3 py-2.5">
         {stageSuggest.length > 0 && !stageRunning && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">

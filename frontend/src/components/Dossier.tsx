@@ -26,7 +26,6 @@ export default function Dossier({ character, actName, act, slice, portrait }: { 
 
   return (
     <div className="flex h-full flex-col">
-      {/* 头部 */}
       <div className="flex items-center gap-3 border-b border-ink-700 px-4 py-3">
         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-ink-700 ring-2 ring-rose-400/50">
           {portrait ? <img src={portrait} className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-zinc-400">{character.slice(0, 1)}</div>}
@@ -45,7 +44,6 @@ export default function Dossier({ character, actName, act, slice, portrait }: { 
         </div>
       </div>
 
-      {/* tabs */}
       <div className="flex shrink-0 border-b border-ink-700">
         {TABS.map(({ k, icon: Icon }) => (
           <button
@@ -58,7 +56,6 @@ export default function Dossier({ character, actName, act, slice, portrait }: { 
         ))}
       </div>
 
-      {/* 内容 */}
       <div className="min-h-0 flex-1">
         {tab === "审问" ? (
           <ChatPanel character={character} actName={actName} slice={slice} />

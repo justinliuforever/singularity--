@@ -4,8 +4,6 @@ import { useUI } from "../store";
 
 export default function TopBar({ graph, slice }: { graph: Graph; slice: Slice }) {
   const { mode, setMode, act, perspective, enterChar, set } = useUI();
-  const acts = graph.meta.acts;
-  const curAct = acts.find((a) => a.ord === act);
   const pcs = graph.nodes.filter((n) => n.kind === "character" && n.role === "PC").map((n) => n.id);
 
   return (

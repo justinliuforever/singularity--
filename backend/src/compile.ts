@@ -316,7 +316,6 @@ function parseCsv(text: string): string[][] {
         row = [];
         cur = "";
       } else if (ch === "\r") {
-        // skip
       } else cur += ch;
     }
   }

@@ -25,7 +25,6 @@ export default function AuditPanel({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="ml-auto text-zinc-500 hover:text-zinc-200"><X size={15} /></button>
         </div>
 
-        {/* 统计 */}
         <div className="grid grid-cols-3 gap-2 border-b border-ink-700 px-4 py-3 text-center">
           <Stat label="事件 / 因果" v={`${stats.events}/${stats.edges}`} tone="text-zinc-200" />
           <Stat label="矛盾" v={stats.contradictions} tone={stats.contradictions ? "text-amber-300" : "text-zinc-500"} />
@@ -35,7 +34,6 @@ export default function AuditPanel({ onClose }: { onClose: () => void }) {
           <Stat label="谜底不可达" v={stats.unsolvable ?? 0} tone={stats.unsolvable ? "text-amber-300" : "text-emerald-300"} />
         </div>
 
-        {/* ASP 求解器确认 */}
         {audit.solver && (
           <div className="flex items-center gap-1.5 border-b border-ink-700 bg-emerald-500/5 px-4 py-1.5 text-[10px] text-emerald-200/90">
             <span className="rounded bg-emerald-500/20 px-1 text-[8px] text-emerald-200">ASP</span>
@@ -43,7 +41,6 @@ export default function AuditPanel({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {/* 发现列表 */}
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
           {findings.length === 0 ? (
             <div className="flex items-center gap-2 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-3 text-[12px] text-emerald-200">
