@@ -5,12 +5,13 @@ import ELK from "elkjs/lib/elk.bundled.js";
 import { ChevronLeft, Undo2, Loader2, Zap, Search, Network, RotateCcw, AlertTriangle, Pencil, Trash2, Sparkles } from "lucide-react";
 import type { StoryGraph, StoryEvent } from "@liumang/shared";
 import { useUI, type EventMode } from "../store";
-import { postPreview } from "../lib/api";
+import { postPreview, cognitionImpact, type CognitionResult } from "../lib/api";
 import StoryMinimap from "./StoryMinimap";
 import EditHUD from "./EditHUD";
 import InsertPanel from "./InsertPanel";
 import EditNodePanel from "./EditNodePanel";
 import CascadeDrawer from "./CascadeDrawer";
+import CognitionDrawer from "./CognitionDrawer";
 
 const NODE_W = 236;
 const NODE_H = 138;
@@ -30,15 +31,17 @@ interface NodeData { ev: StoryEvent; role?: "spine" | "ctx"; side?: Side; layer?
 
 /** 富卡片节点：锚点(焦点)/选中/三模式激活态/改本草稿态 */
 function StoryCard({ data }: { data: NodeData }) {
-  const { selEvent, hoverEvent, propLevel, flagged, editing, draft } = useUI();
+  const { selEvent, hoverEvent, hoverCharEvents, propLevel, flagged, editing, draft } = useUI();
   const { ev, role, side, layer = 0, sideMax = 0, mode, origin, affected } = data;
   const flag = flagged[ev.id];
   const removed = editing && draft.removeEventIds.includes(ev.id);
   const isNew = editing && draft.addEvents.some((e) => e.id === ev.id);
   const edited = editing && draft.updateEvents.some((u) => u.id === ev.id);
+  const sessionNew = ev.id.startsWith("NC_"); // 本会话采纳的新角色带进来的剧情事件
   const color = TYPE_COLOR[ev.type] ?? "#60a5fa";
   const sel = selEvent === ev.id;
   const hot = hoverEvent === ev.id;
+  const charHot = hoverCharEvents.includes(ev.id); // 认知影响面：悬停角色牵动到此事件
 
   let border = "border-ink-600";
   let glow: string | undefined;
@@ -81,12 +84,13 @@ function StoryCard({ data }: { data: NodeData }) {
   else if (affected && !origin) { glow = "0 0 0 1px #f59e0baa, 0 0 14px #f59e0b66"; }
 
   return (
-    <div className={`relative rounded-xl border bg-ink-850 ${hot ? "ring-2 ring-amber-300/90" : selRing ? "ring-2 ring-sky-400/60" : ""} ${border} ${wavePulse ? "blast-wave" : ""}`} style={{ width: NODE_W, height: NODE_H, opacity: hot ? 1 : opacity, boxShadow: hot ? "0 0 0 2px #fcd34d, 0 0 20px #fcd34daa" : glow }}>
+    <div className={`relative rounded-xl border bg-ink-850 ${hot ? "ring-2 ring-amber-300/90" : charHot ? "ring-2 ring-accent/80" : selRing ? "ring-2 ring-sky-400/60" : ""} ${border} ${wavePulse ? "blast-wave" : ""}`} style={{ width: NODE_W, height: NODE_H, opacity: hot || charHot ? 1 : opacity, boxShadow: hot ? "0 0 0 2px #fcd34d, 0 0 20px #fcd34daa" : charHot ? "0 0 0 2px #a78bfa, 0 0 18px #a78bfa99" : glow }}>
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
       <span className="absolute left-0 top-0 h-full w-1.5 rounded-l-xl" style={{ background: color }} />
       {removed && <span className="absolute inset-0 z-10 grid place-items-center rounded-xl bg-ink-950/30"><span className="rounded bg-rose-500 px-2 py-0.5 text-[9px] font-bold text-white shadow">✗ 删除</span></span>}
       {isNew && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-emerald-400 px-1.5 py-0.5 text-[8px] font-bold text-ink-950 shadow">＋新</span>}
+      {sessionNew && !isNew && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-teal-400 px-1.5 py-0.5 text-[8px] font-bold text-ink-950 shadow" title="本会话采纳的新角色带进来的剧情">＋角色</span>}
       {affected && !origin && !removed && !isNew && <span className="absolute -right-1.5 top-3 rounded bg-amber-400/90 px-1 text-[8px] font-bold text-ink-950 shadow">波及</span>}
       {badge && <span className="absolute -right-1.5 -top-1.5 rounded-full px-1.5 py-0.5 text-[8px] font-bold text-white shadow" style={{ background: badge.bg }}>{badge.text}</span>}
       {selRing && !removed && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-sky-400 px-1.5 py-0.5 text-[8px] font-bold text-white shadow">选中</span>}
@@ -198,6 +202,26 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
     seeds.forEach((s) => seen.delete(s));
     return seen;
   }, [editing, draft, story]);
+
+  // A1 改本 → 角色认知·影响面：脏草稿时确定性派生"牵动了谁的认知"（结构性改动才重抓，不随打字漂移）
+  const [cog, setCog] = useState<CognitionResult | null>(null);
+  const [cogLoading, setCogLoading] = useState(false);
+  const dirty = editing && draft.removeEventIds.length + draft.addEvents.length + draft.removeEdges.length + draft.updateEvents.length > 0;
+  const cogKey = dirty
+    ? JSON.stringify({ a: draft.addEvents.map((e) => e.id), r: draft.removeEventIds, e: draft.removeEdges, u: draft.updateEvents.map((u) => u.id), ap: applied })
+    : "";
+  useEffect(() => {
+    if (!cogKey) { setCog(null); setCogLoading(false); return; }
+    let live = true;
+    setCogLoading(true);
+    const delta = { addEvents: draft.addEvents, addEdges: draft.addEdges, removeEventIds: draft.removeEventIds, removeEdges: draft.removeEdges, updateEvents: draft.updateEvents };
+    cognitionImpact(delta, applied)
+      .then((r) => { if (live) setCog(r); })
+      .catch(() => { if (live) setCog(null); })
+      .finally(() => { if (live) setCogLoading(false); });
+    return () => { live = false; };
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [cogKey]);
 
   // 改本一旦产生下游波及 → 自动切「推演下游」，把全部下游铺开（草稿态当主角）；用户手动切走后不再强切
   const autoBlasted = useRef(false);
@@ -412,7 +436,8 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
       <InsertPanel story={story} />
       <EditNodePanel story={story} />
       <CascadeDrawer story={story} />
-      <EditHUD affectedCount={affected.size} />
+      <CognitionDrawer cog={cog} loading={cogLoading} />
+      <EditHUD affectedCount={affected.size} cognCount={cog?.chars.length ?? 0} />
       {!editing && <div className="absolute bottom-3 right-3 z-10"><StoryMinimap story={story} highlight={scopeIds} caption={`${kindLabel}：${labelOf(detail)}`} portraitOf={portraitOf} /></div>}
     </div>
   );

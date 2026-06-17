@@ -73,6 +73,67 @@ export async function cascadeRewrite(delta: EditDelta, applied?: EditDelta, only
   return r.json();
 }
 
+// A1 改本 → 角色认知·影响面
+export type CogRel = "actor" | "knows" | "false" | "hide";
+export interface CogFact { id: string; label: string; rel: CogRel; eventIds: string[] }
+export interface CharImpact {
+  char: string;
+  direct: boolean;
+  roles: string[];
+  rels: CogRel[];
+  facts: CogFact[];
+  events: string[];
+}
+export interface CognitionResult {
+  touched: { id: string; title: string; kind: "edited" | "downstream" }[];
+  chars: CharImpact[];
+  factCount: number;
+}
+export async function cognitionImpact(delta: EditDelta, applied?: EditDelta): Promise<CognitionResult> {
+  const r = await fetch(`${BASE}/cognition`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
+  if (!r.ok) throw new Error(`cognition ${r.status}`);
+  return r.json();
+}
+
+// B1 加人物 · 命名充实
+export interface CharRelation { target: string; type: string; why: string; exists: boolean }
+/** 角色的剧情事件（dashboard 展示 + 可转成故事图 StoryEvent/边） */
+export interface CharStoryEvent {
+  id: string;
+  type: string; // Event/Decision/Lie/Reveal/RelationChange…
+  title: string;
+  summary: string;
+  act: string;
+  actOrd: number | null;
+  actOk: boolean;
+  withChars: string[];
+  afterId: string | null;
+  afterTitle: string | null;
+  leadsToId: string | null;
+  leadsToTitle: string | null;
+  motive: string;
+  effect: string;
+}
+export interface CharDraft {
+  name: string;
+  persona: string;
+  want: string;
+  need: string;
+  conflict: string;
+  secret: string;
+  falseBelief?: { belief: string; truth: string };
+  knows: string[];
+  relations: CharRelation[];
+  storyEvents: CharStoryEvent[];
+  hook: string;
+}
+export interface SuggestCharResult { draft: CharDraft; warnings: string[]; cast: string[]; acts: string[]; raw?: string }
+export async function suggestCharacter(name: string, hint: string, avoid: string[] = []): Promise<SuggestCharResult> {
+  const r = await fetch(`${BASE}/character/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, hint, avoid }) });
+  if (!r.ok) throw new Error(`character/suggest ${r.status}`);
+  return r.json();
+}
+
 export interface SuggestOption { title: string; summary: string; type: string; actors: string[] }
 export async function suggestInserts(fromId: string, toId: string): Promise<{ options: SuggestOption[]; raw?: string }> {
   const r = await fetch(`${BASE}/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fromId, toId }) });

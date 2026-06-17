@@ -30,9 +30,10 @@ const EDGE_COLOR: Record<string, string> = {
   causes: "#94a3b8", motivates: "#a78bfa", enables: "#64748b", reveals: "#34d399", depends_on: "#f59e0b", contradicts: "#fb7185",
 };
 
-export default function StoryCanvas({ story, portraitOf }: { story: StoryGraph; portraitOf: (c: string) => string | null }) {
+export default function StoryCanvas({ story, portraitOf, newChars }: { story: StoryGraph; portraitOf: (c: string) => string | null; newChars?: Set<string> }) {
   const { perspective, selEvent, hoverEvent, flagged, pickEvent, openDetail, set } = useUI();
-  const layout = useMemo(() => computeLayout(story), [story]);
+  const layout = useMemo(() => computeLayout(story, newChars), [story, newChars]);
+  const isNewChar = (c: string) => !!newChars?.has(c);
 
   const { lanes, cols, pos, W, H } = layout;
   const evById = new Map(story.events.map((e) => [e.id, e]));
@@ -108,11 +109,14 @@ export default function StoryCanvas({ story, portraitOf }: { story: StoryGraph; 
               style={{ left: 0, top: ln.top, width: LABEL_W, height: ln.height }}
               title={ln.char.startsWith("__") ? ln.char : `${ln.char} · 故事线详图`}
             >
-              <span className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-ink-700 ring-1" style={{ boxShadow: lit ? "0 0 0 2px #fb7185" : undefined }}>
+              <span className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-ink-700 ring-1" style={{ boxShadow: lit ? "0 0 0 2px #fb7185" : isNewChar(ln.char) ? "0 0 0 2px #2dd4bf" : undefined }}>
                 {portrait ? <img src={portrait} className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-[10px] text-zinc-400">{ln.label.slice(0, 1)}</span>}
               </span>
               <span className="min-w-0">
-                <span className={`block truncate text-[11px] ${lit ? "font-semibold text-rose-200" : ln.isPC ? "text-zinc-200" : "text-zinc-400"}`}>{ln.label}</span>
+                <span className={`flex items-center gap-1 truncate text-[11px] ${lit ? "font-semibold text-rose-200" : isNewChar(ln.char) ? "font-medium text-teal-200" : ln.isPC ? "text-zinc-200" : "text-zinc-400"}`}>
+                  {ln.label}
+                  {isNewChar(ln.char) && <span className="shrink-0 rounded bg-teal-400/20 px-1 text-[8px] font-bold text-teal-200">新</span>}
+                </span>
                 <span className="block text-[9px] text-zinc-600">{ln.count} 事件</span>
               </span>
             </button>
@@ -174,9 +178,9 @@ export default function StoryCanvas({ story, portraitOf }: { story: StoryGraph; 
 interface Lane { char: string; label: string; isPC: boolean; count: number; top: number; height: number }
 interface Col { key: string; label: string; ord: number | null }
 
-function computeLayout(story: StoryGraph) {
-  // 泳道 = PC + 事件数≥5 的关键 NPC（最多 14 条），保证 6 个 PC 都在
-  const laneCast = story.cast.filter((c) => !c.char.startsWith("__") && (c.isPC || c.count >= 5)).slice(0, 14);
+function computeLayout(story: StoryGraph, newChars?: Set<string>) {
+  // 泳道 = PC + 事件数≥5 的关键 NPC + 本会话新增角色（最多 15 条），保证 6 个 PC 都在
+  const laneCast = story.cast.filter((c) => !c.char.startsWith("__") && (c.isPC || c.count >= 5 || newChars?.has(c.char))).slice(0, 15);
   const laneChars = laneCast.map((c) => c.char);
   const laneIdx = new Map(laneChars.map((c, i) => [c, i]));
 

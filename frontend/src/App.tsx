@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clapperboard, LogIn, MousePointerClick, Loader2, Stethoscope } from "lucide-react";
+import { Clapperboard, LogIn, MousePointerClick, Loader2, Stethoscope, UserPlus } from "lucide-react";
 import { sliceGraph, type Graph, type StoryGraph } from "@liumang/shared";
 import { fetchGraph, fetchStory, fetchAudit, postPreview } from "./lib/api";
 import { useUI } from "./store";
 import { applyDraft } from "./lib/draft";
+import { injectSessionChars, charsToStoryDraft } from "./lib/sessionGraph";
 import RelationLens from "./components/RelationLens";
 import StagePanel from "./components/StagePanel";
 import StageJudge from "./components/StageJudge";
@@ -11,6 +12,7 @@ import StoryCanvas from "./components/StoryCanvas";
 import StoryDetail from "./components/StoryDetail";
 import EventDetail from "./components/EventDetail";
 import AuditPanel from "./components/AuditPanel";
+import CharacterForge from "./components/CharacterForge";
 import ActScrubber from "./components/ActScrubber";
 import TopBar from "./components/TopBar";
 import Dossier from "./components/Dossier";
@@ -23,10 +25,27 @@ export default function App() {
   const [err, setErr] = useState<string | null>(null);
   const [actOpen, setActOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
-  const { mode, act, perspective, selEvent, detailStack, audit, applied, liveStage, set, setAudit, setLiveStage, enterChar, closeDetail } = useUI();
+  const [forgeOpen, setForgeOpen] = useState(false);
+  const { mode, act, perspective, selEvent, detailStack, audit, applied, liveStage, sessionChars, set, setAudit, setLiveStage, enterChar, closeDetail } = useUI();
   const detail = detailStack[detailStack.length - 1] ?? null;
-  /** 本会话生效的故事图 = 原图 + 已应用改动（"保留"后整张图都反映它；刷新即还原，不写本子） */
-  const eStory = useMemo(() => (story ? applyDraft(story, applied) : null), [story, applied]);
+  /** 本会话生效的故事图 = 原图 + 已应用改动 + 本会话采纳新角色的剧情（刷新即还原，不写本子） */
+  const eStory = useMemo(() => {
+    if (!story) return null;
+    let s = applyDraft(story, applied);
+    if (sessionChars.length) {
+      const existing = new Set(s.events.map((e) => e.id));
+      const { addEvents, addEdges } = charsToStoryDraft(sessionChars, existing);
+      if (addEvents.length) s = applyDraft(s, { addEvents, addEdges, removeEventIds: [], removeEdges: [], updateEvents: [] });
+      // 把新角色加进 cast → 左列泳道才会出现 ta（事件落到 ta 自己的泳道，而非同场角色的）
+      const newCast = sessionChars
+        .filter((c) => c.storyEvents.length && !s.cast.some((x) => x.char === c.name))
+        .map((c) => ({ char: c.name, count: c.storyEvents.length, isPC: false }));
+      if (newCast.length) s = { ...s, cast: [...newCast, ...s.cast] };
+    }
+    return s;
+  }, [story, applied, sessionChars]);
+  /** 本会话新增角色名（画布泳道高亮 + 强制显示） */
+  const newCharNames = useMemo(() => new Set(sessionChars.map((c) => c.name)), [sessionChars]);
   // 应用删除后，若当前锚点/选中事件已不在图中 → 优雅回退，避免空详图
   useEffect(() => {
     if (!eStory) return;
@@ -54,6 +73,8 @@ export default function App() {
   }, [applied, setAudit]);
 
   const slice = useMemo(() => (graph ? sliceGraph(graph, act, perspective) : null), [graph, act, perspective]);
+  /** 关系网用的图 = 原图 + 本会话采纳的新角色（仅注入关系网，不波及审问/同台/KB；刷新即还原） */
+  const { graph: lensGraph, draftNames } = useMemo(() => (graph ? injectSessionChars(graph, sessionChars) : { graph: graph as any, draftNames: new Set<string>() }), [graph, sessionChars]);
   const curActName = useMemo(() => graph?.meta.acts.find((a) => a.ord === act)?.name ?? `第${act}幕`, [graph, act]);
   const portraitOf = (name: string) => graph?.nodes.find((n) => n.id === name)?.image ?? null;
 
@@ -100,6 +121,12 @@ export default function App() {
                 >
                   <Stethoscope size={13} /> 逻辑体检{audit ? ` · ${audit.findings.length}` : ""}
                 </button>
+                <button
+                  onClick={() => setForgeOpen(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-ink-700 px-2.5 py-1.5 text-[11px] text-zinc-300 transition-colors hover:border-accent/60 hover:text-white"
+                >
+                  <UserPlus size={13} /> 加人物
+                </button>
                 <span className="text-[10px] text-zinc-600">双击事件展开 · 点泳道聚焦角色主线</span>
               </>
             )}
@@ -107,18 +134,19 @@ export default function App() {
 
           <div className="relative min-h-0 flex-1">
             {mode === "scene" ? (
-              liveStage ? <StagePanel graph={graph} actName={curActName} portraitOf={portraitOf} /> : <RelationLens graph={graph} />
+              liveStage ? <StagePanel graph={graph} actName={curActName} portraitOf={portraitOf} /> : <RelationLens graph={lensGraph} draftNames={draftNames} />
             ) : eStory ? (
               detail ? (
                 <StoryDetail story={eStory} portraitOf={portraitOf} />
               ) : (
-                <StoryCanvas story={eStory} portraitOf={portraitOf} />
+                <StoryCanvas story={eStory} portraitOf={portraitOf} newChars={newCharNames} />
               )
             ) : (
               <div className="grid h-full place-items-center text-zinc-500"><div className="flex items-center gap-2 text-sm"><Loader2 size={15} className="animate-spin" />编织故事图…</div></div>
             )}
             {actOpen && <ActDossier ord={act} name={curActName} onClose={() => setActOpen(false)} />}
             {auditOpen && <AuditPanel onClose={() => setAuditOpen(false)} />}
+            {forgeOpen && <CharacterForge onClose={() => setForgeOpen(false)} />}
           </div>
         </div>
 

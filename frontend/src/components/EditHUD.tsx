@@ -1,4 +1,4 @@
-import { Sparkles, Zap, ShieldCheck, X, RotateCcw, Check, AlertTriangle, CheckCircle2, Loader2, Wand2 } from "lucide-react";
+import { Sparkles, Zap, ShieldCheck, X, RotateCcw, Check, AlertTriangle, CheckCircle2, Loader2, Wand2, Brain } from "lucide-react";
 import { useUI, type EditStage } from "../store";
 import type { PreviewResult } from "../lib/api";
 
@@ -9,14 +9,14 @@ const STEPS: { key: EditStage; icon: typeof Zap; label: string; color: string }[
 ];
 const ORDER: EditStage[] = ["idle", "frame", "verify", "done"];
 
-export default function EditHUD({ affectedCount = 0 }: { affectedCount?: number }) {
-  const { editing, draft, editStage, preview, cascadeOpen, clearDraft, commitDraft, setCascadeOpen, setEventMode, set } = useUI();
+export default function EditHUD({ affectedCount = 0, cognCount = 0 }: { affectedCount?: number; cognCount?: number }) {
+  const { editing, draft, editStage, preview, cascadeOpen, cognitionOpen, clearDraft, commitDraft, setCascadeOpen, setCognitionOpen, setEventMode, set } = useUI();
   if (!editing) return null;
   const dirty = draft.removeEventIds.length + draft.addEvents.length + draft.removeEdges.length + draft.updateEvents.length > 0;
   const stageIdx = ORDER.indexOf(editStage);
 
   return (
-    <div className="absolute bottom-3 left-1/2 z-20 w-[560px] max-w-[90%] -translate-x-1/2 rounded-2xl border border-accent/40 bg-ink-900/95 shadow-2xl backdrop-blur transition-transform duration-200" style={{ transform: cascadeOpen ? "translateX(calc(-50% - 192px))" : undefined }}>
+    <div className="absolute bottom-3 left-1/2 z-20 w-[560px] max-w-[90%] -translate-x-1/2 rounded-2xl border border-accent/40 bg-ink-900/95 shadow-2xl backdrop-blur transition-transform duration-200" style={{ transform: cascadeOpen || cognitionOpen ? "translateX(calc(-50% - 192px))" : undefined }}>
       {/* 三段流水线 stepper */}
       <div className="flex items-center gap-1 border-b border-ink-700 px-3 py-2">
         <span className="mr-1 text-[11px] font-semibold text-zinc-200">改本推演</span>
@@ -68,6 +68,9 @@ export default function EditHUD({ affectedCount = 0 }: { affectedCount?: number 
       {dirty && (
         <div className="flex items-center gap-2 border-t border-ink-700 px-3 py-2">
           <button onClick={clearDraft} className="flex items-center gap-1 rounded-lg border border-ink-700 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:border-rose-400/50 hover:text-rose-200" title="放弃这次改动，回到改本前"><RotateCcw size={12} /> 撤销改动</button>
+          {cognCount > 0 && (
+            <button onClick={() => setCognitionOpen(!cognitionOpen)} className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors ${cognitionOpen ? "border-accent/70 bg-accent/20 text-accent-soft" : "border-accent/40 bg-accent/10 text-accent-soft hover:bg-accent/20"}`} title="这次改动牵动了哪些角色的认知（在场/知道/误信/守秘）—— 确定性派生"><Brain size={12} /> 认知影响 · {cognCount}人</button>
+          )}
           {affectedCount > 0 && (
             <button onClick={() => { setEventMode("blast"); setCascadeOpen(true); }} className="flex items-center gap-1 rounded-lg border border-amber-400/50 bg-amber-400/10 px-2.5 py-1.5 text-[11px] text-amber-200 hover:bg-amber-400/20" title="先把全部下游铺开，再让 AI 逐个提议怎么跟着改"><Wand2 size={12} /> AI 连锁改写下游 · {affectedCount}</button>
           )}

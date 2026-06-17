@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { StoryEvent, StoryEdge } from "@liumang/shared";
-import type { Audit, Severity, PreviewResult, Grounding, Tell } from "./lib/api";
+import type { Audit, Severity, PreviewResult, Grounding, Tell, CharDraft } from "./lib/api";
 
 /** C1 同台对质：台上一句话 */
 export interface StageTurn { speaker: string; text: string; grounding?: Grounding; replyLeaked?: boolean }
@@ -77,6 +77,8 @@ interface UIState {
   /** 创作画布：选中/悬停的事件 */
   selEvent: string | null;
   hoverEvent: string | null;
+  /** 认知影响面：悬停角色牵动的事件 id 集（画布刷高亮；复用已有 hoverChar 标识哪个角色） */
+  hoverCharEvents: string[];
   /** 事件详图：模式 + 探索深度(跳数) */
   eventMode: EventMode;
   eventDepth: number;
@@ -92,6 +94,10 @@ interface UIState {
   draft: Draft;
   /** 已应用层：点"应用(本会话)"后，把草稿并入这里 → effectiveStory 永久反映（刷新即还原，不写本子） */
   applied: Draft;
+  /** B1 加人物：本会话采纳的新角色（落进关系网；刷新即还原，不写本子） */
+  sessionChars: CharDraft[];
+  acceptChar: (d: CharDraft) => void;
+  removeSessionChar: (name: string) => void;
   editStage: EditStage;
   preview: PreviewResult | null;
   /** 正在编辑的边（点边后弹插入/删除面板） */
@@ -103,6 +109,9 @@ interface UIState {
   /** 下游连锁改写抽屉是否打开 */
   cascadeOpen: boolean;
   setCascadeOpen: (b: boolean) => void;
+  /** 认知影响面抽屉是否打开 */
+  cognitionOpen: boolean;
+  setCognitionOpen: (b: boolean) => void;
   toggleEdit: () => void;
   draftDeleteEvent: (id: string) => void;
   draftUndeleteEvent: (id: string) => void;
@@ -162,6 +171,7 @@ export const useUI = create<UIState>((set) => ({
   stageContradictions: [],
   selEvent: null,
   hoverEvent: null,
+  hoverCharEvents: [],
   eventMode: "explore",
   eventDepth: 1,
   propLevel: -1,
@@ -170,11 +180,13 @@ export const useUI = create<UIState>((set) => ({
   editing: false,
   draft: emptyDraft(),
   applied: emptyDraft(),
+  sessionChars: [],
   editStage: "idle",
   preview: null,
   pendingEdge: null,
   editNodeId: null,
   cascadeOpen: false,
+  cognitionOpen: false,
   detailStack: [],
 
   set: (p) => set(p),
@@ -186,8 +198,9 @@ export const useUI = create<UIState>((set) => ({
   },
   setPendingEdge: (e) => set({ pendingEdge: e }),
   setEditNodeId: (id) => set({ editNodeId: id }),
-  setCascadeOpen: (b) => set({ cascadeOpen: b }),
-  toggleEdit: () => set((s) => ({ editing: !s.editing, draft: emptyDraft(), editStage: "idle", preview: null, pendingEdge: null, editNodeId: null, cascadeOpen: false })),
+  setCascadeOpen: (b) => set(b ? { cascadeOpen: true, cognitionOpen: false } : { cascadeOpen: false }),
+  setCognitionOpen: (b) => set(b ? { cognitionOpen: true, cascadeOpen: false } : { cognitionOpen: false, hoverChar: null, hoverCharEvents: [] }),
+  toggleEdit: () => set((s) => ({ editing: !s.editing, draft: emptyDraft(), editStage: "idle", preview: null, pendingEdge: null, editNodeId: null, cascadeOpen: false, cognitionOpen: false, hoverChar: null, hoverCharEvents: [] })),
   draftDeleteEvent: (id) =>
     set((s) => (s.draft.removeEventIds.includes(id) ? {} : { draft: { ...s.draft, removeEventIds: [...s.draft.removeEventIds, id] } })),
   draftUndeleteEvent: (id) => set((s) => ({ draft: { ...s.draft, removeEventIds: s.draft.removeEventIds.filter((x) => x !== id) } })),
@@ -228,8 +241,11 @@ export const useUI = create<UIState>((set) => ({
       pendingEdge: null,
       editNodeId: null,
       cascadeOpen: false,
+      cognitionOpen: false,
     })),
-  resetSession: () => set({ applied: emptyDraft(), draft: emptyDraft(), editing: false, editStage: "idle", preview: null, pendingEdge: null, editNodeId: null, cascadeOpen: false }),
+  resetSession: () => set({ applied: emptyDraft(), draft: emptyDraft(), sessionChars: [], editing: false, editStage: "idle", preview: null, pendingEdge: null, editNodeId: null, cascadeOpen: false, cognitionOpen: false, hoverChar: null, hoverCharEvents: [] }),
+  acceptChar: (d) => set((s) => ({ sessionChars: [...s.sessionChars.filter((c) => c.name !== d.name), d] })),
+  removeSessionChar: (name) => set((s) => ({ sessionChars: s.sessionChars.filter((c) => c.name !== name) })),
   setEditStage: (s2) => set({ editStage: s2 }),
   setPreview: (p) => set({ preview: p }),
   pickFact: (id) => set((s) => ({ selFact: s.selFact === id ? null : id })),

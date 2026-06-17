@@ -308,19 +308,33 @@ export async function callDeepSeek(system: string, messages: Msg[], opts?: { max
   const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
   const BASE = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
   if (!KEY) throw new Error("DEEPSEEK_API_KEY 未配置");
-  const res = await fetch(`${BASE}/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${KEY}` },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [{ role: "system", content: system }, ...messages],
-      temperature: opts?.temperature ?? 0.85,
-      max_tokens: opts?.maxTokens ?? 800,
-    }),
+  const body = JSON.stringify({
+    model: MODEL,
+    messages: [{ role: "system", content: system }, ...messages],
+    temperature: opts?.temperature ?? 0.85,
+    max_tokens: opts?.maxTokens ?? 800,
   });
-  if (!res.ok) throw new Error(`DeepSeek ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const j: any = await res.json();
-  return j.choices?.[0]?.message?.content ?? "";
+  // 瞬时错误(429 限流 / 5xx / 网络抖动)重试一次，避免连点"换一版"打到限流就 500
+  let lastErr = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt) await new Promise((r) => setTimeout(r, 900));
+    try {
+      const res = await fetch(`${BASE}/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${KEY}` },
+        body,
+      });
+      if (res.ok) {
+        const j: any = await res.json();
+        return j.choices?.[0]?.message?.content ?? "";
+      }
+      lastErr = `DeepSeek ${res.status}: ${(await res.text()).slice(0, 300)}`;
+      if (res.status !== 429 && res.status < 500) break; // 非瞬时错误不重试
+    } catch (e: any) {
+      lastErr = `DeepSeek 网络错误: ${String(e?.message ?? e)}`;
+    }
+  }
+  throw new Error(lastErr || "DeepSeek 调用失败");
 }
 
 /** 动态追问建议：每轮回复后，结合对话/线索/命门/上一轮是否戳墙，生成最佳"下一个问题"(带意图标签) */

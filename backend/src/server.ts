@@ -16,6 +16,8 @@ import { solveStory } from "./solver.js";
 import { previewEdit } from "./preview.js";
 import { suggestInserts, suggestEdit } from "./suggest.js";
 import { cascadeRewrite, cascadeScope } from "./cascade.js";
+import { cognitionImpact } from "./cognition.js";
+import { suggestCharacter } from "./character.js";
 import { sceneTurn, sceneDirector, sceneSuggest, sceneReferee, sceneCast, type StageLine } from "./scene.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -79,6 +81,24 @@ app.post("/preview", async (c) => {
 app.post("/cascade-scope", async (c) => {
   try {
     return c.json(cascadeScope(await c.req.json()));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// A1 改本 → 角色认知·影响面（确定性，无 LLM）：改动 delta → 哪些角色的认知被牵动（涉及/知道/误信/守秘）
+app.post("/cognition", async (c) => {
+  try {
+    return c.json(cognitionImpact(GRAPH, await c.req.json()));
+  } catch (e: any) {
+    return c.json({ error: String(e?.message ?? e) }, 500);
+  }
+});
+
+// B1 加人物·命名充实：作者起名(+方向) → LLM 在世界观里充实成有戏的角色 → 引擎框定 → 草稿供预览
+app.post("/character/suggest", async (c) => {
+  try {
+    return c.json(await suggestCharacter(GRAPH, await c.req.json()));
   } catch (e: any) {
     return c.json({ error: String(e?.message ?? e) }, 500);
   }

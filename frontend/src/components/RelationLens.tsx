@@ -4,8 +4,9 @@ import "@xyflow/react/dist/style.css";
 import type { Graph } from "@liumang/shared";
 import { useUI } from "../store";
 
-export default function RelationLens({ graph }: { graph: Graph }) {
+export default function RelationLens({ graph, draftNames }: { graph: Graph; draftNames?: Set<string> }) {
   const { perspective, hoverChar, set, enterChar } = useUI();
+  const isDraft = (c: string) => !!draftNames?.has(c);
 
   const roleOf = useMemo(() => {
     const m = new Map<string, string>();
@@ -19,7 +20,8 @@ export default function RelationLens({ graph }: { graph: Graph }) {
     const seen = new Map<string, { source: string; target: string; label: string }>();
     for (const e of graph.edges) {
       if (e.kind !== "REL") continue;
-      if (roleOf.get(e.source) !== "PC" && roleOf.get(e.target) !== "PC") continue;
+      // 保留：至少一端是 PC（去 NPC-NPC 噪声）——但本会话新角色的全部关系都留，让 ta 成为真正的枢纽
+      if (roleOf.get(e.source) !== "PC" && roleOf.get(e.target) !== "PC" && !isDraft(e.source) && !isDraft(e.target)) continue;
       const key = [e.source, e.target].sort().join("|");
       if (!seen.has(key)) seen.set(key, { source: e.source, target: e.target, label: e.relType || e.label || "" });
     }
@@ -32,7 +34,7 @@ export default function RelationLens({ graph }: { graph: Graph }) {
     const pcs = [...nodes].filter((c) => roleOf.get(c) === "PC").sort();
     const npcs = [...nodes].filter((c) => roleOf.get(c) !== "PC");
     return { relEdges: rel, pcs, npcs };
-  }, [graph, roleOf]);
+  }, [graph, roleOf, draftNames]);
 
   const focus = perspective !== "god" ? perspective : hoverChar;
   const neighbors = useMemo(() => {
@@ -70,22 +72,23 @@ export default function RelationLens({ graph }: { graph: Graph }) {
 
     const mk = (c: string, x: number, y: number): Node => {
       const pc = isPC(c);
+      const draft = isDraft(c);
       const dim = neighbors ? !neighbors.has(c) : false;
       const isFocus = c === focus;
       return {
         id: c,
         position: { x, y },
-        data: { label: c },
+        data: { label: draft ? `＋${c}` : c },
         style: {
           width: pc ? 92 : 72,
           fontSize: pc ? 11 : 10,
           padding: "5px 4px",
           borderRadius: 999,
-          border: isFocus ? "2px solid #fb7185" : pc ? "1.5px solid #8b5cf6" : "1px solid #3a3e4f",
-          background: pc ? "rgba(139,92,246,0.18)" : "#15161d",
-          color: dim ? "#52525b" : pc ? "#ddd6fe" : "#a1a1aa",
+          border: isFocus ? "2px solid #fb7185" : draft ? "1.5px dashed #34d399" : pc ? "1.5px solid #8b5cf6" : "1px solid #3a3e4f",
+          background: draft ? "rgba(52,211,153,0.16)" : pc ? "rgba(139,92,246,0.18)" : "#15161d",
+          color: dim ? "#52525b" : draft ? "#a7f3d0" : pc ? "#ddd6fe" : "#a1a1aa",
           opacity: dim ? 0.3 : 1,
-          boxShadow: isFocus ? "0 0 0 5px rgba(251,113,133,0.16)" : "none",
+          boxShadow: isFocus ? "0 0 0 5px rgba(251,113,133,0.16)" : draft ? "0 0 0 4px rgba(52,211,153,0.12)" : "none",
           textAlign: "center" as const,
         },
       };
@@ -125,6 +128,7 @@ export default function RelationLens({ graph }: { graph: Graph }) {
     <div className="relative h-full w-full">
       <div className="pointer-events-none absolute right-4 top-3 z-10 text-[10px] text-zinc-600">
         内圈 <span className="text-accent-soft">PC</span> · 外圈 NPC · 悬停/点击聚焦 TA 的关系
+        {draftNames && draftNames.size > 0 && <span className="ml-1.5 rounded bg-emerald-500/15 px-1 py-0.5 text-emerald-300">＋ 本会话新增 {draftNames.size} 人（虚线）</span>}
       </div>
       <ReactFlow
         nodes={nodes}
