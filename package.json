@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@11.0.9",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build:shared": "pnpm -F @liumang/shared build",
     "compile": "pnpm -F @liumang/backend compile",

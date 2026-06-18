@@ -1,6 +1,8 @@
 import type { Graph, StoryGraph } from "@liumang/shared";
 
-const BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:8787";
+// 部署时由 render.yaml 注入后端公网 URL；容忍带不带协议（裸 host 自动补 https）。本地默认连 localhost。
+const RAW = ((import.meta as any).env?.VITE_API_BASE as string | undefined)?.trim();
+const BASE = RAW ? (/^https?:\/\//.test(RAW) ? RAW : `https://${RAW}`) : "http://localhost:8787";
 
 export async function fetchGraph(): Promise<Graph> {
   const r = await fetch(`${BASE}/graph`);
