@@ -380,8 +380,8 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
       </div>
 
       {isEvent && (
-        <div className="absolute left-3 top-[46px] z-10 flex items-center gap-2">
-          <div className="flex overflow-hidden rounded-lg border border-ink-700 bg-ink-900/90 backdrop-blur">
+        <div className="absolute left-3 top-[46px] z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-x-2 gap-y-1.5">
+          <div className="flex shrink-0 overflow-hidden rounded-lg border border-ink-700 bg-ink-900/90 backdrop-blur">
             <ModeBtn active={eventMode === "explore"} onClick={() => setEventMode("explore")} icon={<Network size={12} />}>因果邻域</ModeBtn>
             <ModeBtn active={eventMode === "blast"} onClick={() => setEventMode("blast")} icon={<Zap size={12} />} tone="accent">推演下游</ModeBtn>
             <ModeBtn active={eventMode === "trace"} onClick={() => setEventMode("trace")} icon={<Search size={12} />} tone="amber">溯源上游</ModeBtn>
@@ -392,18 +392,18 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
               {[1, 2].map((d) => (<button key={d} onClick={() => setEventDepth(d)} className={`rounded px-1.5 py-0.5 ${eventDepth === d ? "bg-ink-700 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"}`}>{d}跳</button>))}
             </div>
           )}
-          <span className="mx-1 h-4 w-px bg-ink-700" />
-          <button onClick={toggleEdit} className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10.5px] transition-colors ${editing ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-200" : "border-ink-700 text-zinc-300 hover:border-emerald-400/50 hover:text-emerald-200"}`}>
+          <span className="mx-1 h-4 w-px shrink-0 bg-ink-700" />
+          <button onClick={toggleEdit} className={`flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-[10.5px] transition-colors ${editing ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-200" : "border-ink-700 text-zinc-300 hover:border-emerald-400/50 hover:text-emerald-200"}`}>
             <Pencil size={12} /> {editing ? "退出改本" : "改本"}
           </button>
           {editing && selEvent && !draft.removeEventIds.includes(selEvent) && (
             <>
-              <button onClick={() => setEditNodeId(selEvent)} className="flex items-center gap-1 rounded-lg border border-sky-400/50 bg-sky-500/10 px-2 py-1 text-[10.5px] text-sky-200 hover:bg-sky-500/20"><Pencil size={12} /> 编辑「{(story.events.find((e) => e.id === selEvent)?.title ?? "").slice(0, 8)}」</button>
-              <button onClick={() => draftDeleteEvent(selEvent)} className="flex items-center gap-1 rounded-lg border border-rose-400/50 bg-rose-500/10 px-2 py-1 text-[10.5px] text-rose-200 hover:bg-rose-500/20"><Trash2 size={12} /> 删除「{(story.events.find((e) => e.id === selEvent)?.title ?? "").slice(0, 8)}」</button>
+              <button onClick={() => setEditNodeId(selEvent)} className="flex shrink-0 items-center gap-1 rounded-lg border border-sky-400/50 bg-sky-500/10 px-2 py-1 text-[10.5px] text-sky-200 hover:bg-sky-500/20"><Pencil size={12} /> 编辑「{(story.events.find((e) => e.id === selEvent)?.title ?? "").slice(0, 8)}」</button>
+              <button onClick={() => draftDeleteEvent(selEvent)} className="flex shrink-0 items-center gap-1 rounded-lg border border-rose-400/50 bg-rose-500/10 px-2 py-1 text-[10.5px] text-rose-200 hover:bg-rose-500/20"><Trash2 size={12} /> 删除「{(story.events.find((e) => e.id === selEvent)?.title ?? "").slice(0, 8)}」</button>
               {(() => {
                 const succ = [...story.edges, ...draft.addEdges].find((e) => e.from === selEvent && !draft.removeEdges.some((r) => r.from === e.from && r.to === e.to));
                 return succ ? (
-                  <button onClick={() => setPendingEdge({ from: selEvent, to: succ.to })} className="flex items-center gap-1 rounded-lg border border-accent/50 bg-accent/10 px-2 py-1 text-[10.5px] text-accent-soft hover:bg-accent/20"><Sparkles size={12} /> 在此后插入剧情</button>
+                  <button onClick={() => setPendingEdge({ from: selEvent, to: succ.to })} className="flex shrink-0 items-center gap-1 rounded-lg border border-accent/50 bg-accent/10 px-2 py-1 text-[10.5px] text-accent-soft hover:bg-accent/20"><Sparkles size={12} /> 在此后插入剧情</button>
                 ) : null;
               })()}
             </>
@@ -414,13 +414,13 @@ export default function StoryDetail({ story, portraitOf = () => null }: { story:
       )}
 
       {metrics?.kind === "blast" && (
-        <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-xl border border-accent/40 bg-ink-900/95 px-3 py-2 shadow-2xl backdrop-blur">
+        <div className={`absolute left-1/2 z-10 -translate-x-1/2 rounded-xl border border-accent/40 bg-ink-900/95 px-3 py-2 shadow-2xl backdrop-blur ${editing ? "top-[108px]" : "top-[80px]"}`}>
           <div className="flex items-center gap-2 text-[11px]"><Zap size={14} className="text-accent-soft" /><span className="font-medium text-zinc-200">推演下游影响</span><button onClick={() => setRunId((r) => r + 1)} className="ml-1 flex items-center gap-0.5 rounded border border-ink-600 px-1.5 py-0.5 text-[10px] text-zinc-300 hover:border-accent/60 hover:text-white"><RotateCcw size={10} /> 重播</button></div>
           <div className="mt-1.5 flex items-center gap-3 text-[11px]"><Metric label="波及事件" v={metrics.count} tone="text-accent-soft" /><Metric label="牵动角色" v={metrics.chars} tone="text-rose-200" /><Metric label="幕跨度" v={metrics.lo != null ? `${metrics.lo}→${metrics.hi}` : "—"} tone="text-zinc-200" /><Metric label="波数" v={`${Math.max(0, propLevel)}/${metrics.waves}`} tone="text-zinc-200" />{metrics.touchEnd && <span className="flex items-center gap-1 rounded bg-rose-500/20 px-1.5 py-0.5 text-[10px] text-rose-200"><AlertTriangle size={11} /> 触及结局/谜底</span>}</div>
         </div>
       )}
       {metrics?.kind === "trace" && (
-        <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 flex items-center gap-3 rounded-xl border border-amber-400/40 bg-ink-900/95 px-3 py-2 text-[11px] shadow-2xl backdrop-blur"><Search size={14} className="text-amber-300" /><span className="font-medium text-zinc-200">根因溯源</span><button onClick={() => setRunId((r) => r + 1)} className="flex items-center gap-0.5 rounded border border-ink-600 px-1.5 py-0.5 text-[10px] text-zinc-300 hover:border-amber-400/60"><RotateCcw size={10} /> 重播</button><Metric label="前因事件" v={metrics.count} tone="text-amber-200" /><Metric label="深度" v={`${metrics.depth}步`} tone="text-zinc-200" /><Metric label="根因" v={metrics.roots} tone="text-amber-200" /></div>
+        <div className={`absolute left-1/2 z-10 -translate-x-1/2 flex items-center gap-3 rounded-xl border border-amber-400/40 bg-ink-900/95 px-3 py-2 text-[11px] shadow-2xl backdrop-blur ${editing ? "top-[108px]" : "top-[80px]"}`}><Search size={14} className="text-amber-300" /><span className="font-medium text-zinc-200">根因溯源</span><button onClick={() => setRunId((r) => r + 1)} className="flex items-center gap-0.5 rounded border border-ink-600 px-1.5 py-0.5 text-[10px] text-zinc-300 hover:border-amber-400/60"><RotateCcw size={10} /> 重播</button><Metric label="前因事件" v={metrics.count} tone="text-amber-200" /><Metric label="深度" v={`${metrics.depth}步`} tone="text-zinc-200" /><Metric label="根因" v={metrics.roots} tone="text-amber-200" /></div>
       )}
 
       {loading && <div className="absolute inset-0 z-20 grid place-items-center bg-ink-950/60"><div className="flex items-center gap-2 text-sm text-zinc-400"><Loader2 size={15} className="animate-spin" />分层布局中…</div></div>}

@@ -76,6 +76,7 @@ export default function StagePanel({ graph, actName, portraitOf }: { graph: Grap
         appendStageTurn({ speaker: next, text: r.text, grounding: r.grounding, replyLeaked: r.replyLeaked });
         t = [...t, { speaker: next, text: r.text }];
       } catch {
+        appendStageTurn({ speaker: "主持", text: "（连接出错或超时，本轮中断——稍候点「继续」重试）" });
         break;
       }
       spoken.add(next);

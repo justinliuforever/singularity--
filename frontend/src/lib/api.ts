@@ -4,14 +4,32 @@ import type { Graph, StoryGraph } from "@liumang/shared";
 const RAW = ((import.meta as any).env?.VITE_API_BASE as string | undefined)?.trim();
 const BASE = RAW ? (/^https?:\/\//.test(RAW) ? RAW : `https://${RAW}`) : "http://localhost:8787";
 
+/**
+ * fetch + 超时（默认 90s，够最慢的 LLM 调用）。
+ * 关键：防止生产环境偶发的请求挂起（边缘抖动/连接 stall）把上层的 loading/running 状态永久卡死——
+ * 没有超时时 await 永不返回 → 状态标志重置不了 → 界面"卡住只能刷新"。超时则抛错，上层 catch/finally 得以重置。
+ */
+async function afetch(input: string, init?: RequestInit, timeoutMs = 90000): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: ctrl.signal });
+  } catch (e: any) {
+    if (e?.name === "AbortError") throw new Error("请求超时，请重试");
+    throw new Error("网络错误，请重试");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchGraph(): Promise<Graph> {
-  const r = await fetch(`${BASE}/graph`);
+  const r = await afetch(`${BASE}/graph`);
   if (!r.ok) throw new Error(`graph ${r.status}`);
   return r.json();
 }
 
 export async function fetchStory(): Promise<StoryGraph> {
-  const r = await fetch(`${BASE}/story`);
+  const r = await afetch(`${BASE}/story`);
   if (!r.ok) throw new Error(`story ${r.status}`);
   return r.json();
 }
@@ -32,7 +50,7 @@ export interface Audit {
   solver?: string;
 }
 export async function fetchAudit(): Promise<Audit> {
-  const r = await fetch(`${BASE}/audit`);
+  const r = await afetch(`${BASE}/audit`);
   if (!r.ok) throw new Error(`audit ${r.status}`);
   return r.json();
 }
@@ -51,7 +69,7 @@ export interface PreviewResult {
   cleared: Finding[];
 }
 export async function postPreview(delta: EditDelta, applied?: EditDelta): Promise<PreviewResult> {
-  const r = await fetch(`${BASE}/preview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
+  const r = await afetch(`${BASE}/preview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
   if (!r.ok) throw new Error(`preview ${r.status}`);
   return r.json();
 }
@@ -65,12 +83,12 @@ export interface CascadeRewrite {
   reason: string;
 }
 export async function cascadeScope(delta: EditDelta, applied?: EditDelta): Promise<{ affected: string[] }> {
-  const r = await fetch(`${BASE}/cascade-scope`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
+  const r = await afetch(`${BASE}/cascade-scope`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
   if (!r.ok) throw new Error(`cascade-scope ${r.status}`);
   return r.json();
 }
 export async function cascadeRewrite(delta: EditDelta, applied?: EditDelta, onlyIds?: string[]): Promise<{ affected: string[]; rewrites: CascadeRewrite[]; capped?: number }> {
-  const r = await fetch(`${BASE}/cascade`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied, onlyIds }) });
+  const r = await afetch(`${BASE}/cascade`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied, onlyIds }) });
   if (!r.ok) throw new Error(`cascade ${r.status}`);
   return r.json();
 }
@@ -92,7 +110,7 @@ export interface CognitionResult {
   factCount: number;
 }
 export async function cognitionImpact(delta: EditDelta, applied?: EditDelta): Promise<CognitionResult> {
-  const r = await fetch(`${BASE}/cognition`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
+  const r = await afetch(`${BASE}/cognition`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...delta, applied }) });
   if (!r.ok) throw new Error(`cognition ${r.status}`);
   return r.json();
 }
@@ -131,21 +149,21 @@ export interface CharDraft {
 }
 export interface SuggestCharResult { draft: CharDraft; warnings: string[]; cast: string[]; acts: string[]; raw?: string }
 export async function suggestCharacter(name: string, hint: string, avoid: string[] = []): Promise<SuggestCharResult> {
-  const r = await fetch(`${BASE}/character/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, hint, avoid }) });
+  const r = await afetch(`${BASE}/character/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, hint, avoid }) });
   if (!r.ok) throw new Error(`character/suggest ${r.status}`);
   return r.json();
 }
 
 export interface SuggestOption { title: string; summary: string; type: string; actors: string[] }
 export async function suggestInserts(fromId: string, toId: string): Promise<{ options: SuggestOption[]; raw?: string }> {
-  const r = await fetch(`${BASE}/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fromId, toId }) });
+  const r = await afetch(`${BASE}/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fromId, toId }) });
   if (!r.ok) throw new Error(`suggest ${r.status}`);
   return r.json();
 }
 
 export interface EditOption { title: string; summary: string; effect: string; angle: string }
 export async function suggestEdit(id: string, direction?: string): Promise<{ options: EditOption[]; raw?: string }> {
-  const r = await fetch(`${BASE}/suggest-edit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, direction }) });
+  const r = await afetch(`${BASE}/suggest-edit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, direction }) });
   if (!r.ok) throw new Error(`suggest-edit ${r.status}`);
   return r.json();
 }
@@ -170,14 +188,14 @@ export interface ChatResult {
 export interface StageLine { speaker: string; text: string }
 export interface SceneTurnResult { speaker: string; text: string; grounding: Grounding; replyLeaked: boolean }
 export async function sceneTurn(actName: string, present: string[], transcript: StageLine[], speaker: string): Promise<SceneTurnResult> {
-  const r = await fetch(`${BASE}/scene/turn`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript, speaker }) });
+  const r = await afetch(`${BASE}/scene/turn`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript, speaker }) });
   const j = await r.json();
   if (j.error) throw new Error(j.error);
   return j;
 }
 export async function sceneSuggest(actName: string, present: string[], transcript: StageLine[]): Promise<string[]> {
   try {
-    const r = await fetch(`${BASE}/scene/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript }) });
+    const r = await afetch(`${BASE}/scene/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript }) });
     const j = await r.json();
     return Array.isArray(j.qs) ? j.qs : [];
   } catch {
@@ -187,7 +205,7 @@ export async function sceneSuggest(actName: string, present: string[], transcrip
 export interface CastInfo { name: string; goal: string; perceives: string; secrets: string[]; falseBeliefs: { belief: string; truth: string }[] }
 export async function sceneCast(actName: string, present: string[]): Promise<CastInfo[]> {
   try {
-    const r = await fetch(`${BASE}/scene/cast`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present }) });
+    const r = await afetch(`${BASE}/scene/cast`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present }) });
     const j = await r.json();
     return Array.isArray(j.cast) ? j.cast : [];
   } catch {
@@ -197,7 +215,7 @@ export async function sceneCast(actName: string, present: string[]): Promise<Cas
 export interface Tell { by: string; said: string; truth: string; tag: string; note: string }
 export async function sceneReferee(actName: string, present: string[], transcript: StageLine[]): Promise<Tell[]> {
   try {
-    const r = await fetch(`${BASE}/scene/referee`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript }) });
+    const r = await afetch(`${BASE}/scene/referee`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actName, present, transcript }) });
     const j = await r.json();
     return Array.isArray(j.points) ? j.points : [];
   } catch {
@@ -208,7 +226,7 @@ export async function sceneReferee(actName: string, present: string[], transcrip
 export interface FollowupQ { q: string; tag: string }
 export async function fetchFollowups(character: string, actName: string, messages: { role: "user" | "assistant"; content: string }[]): Promise<FollowupQ[]> {
   try {
-    const r = await fetch(`${BASE}/followup`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ character, actName, messages }) });
+    const r = await afetch(`${BASE}/followup`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ character, actName, messages }) });
     const j = await r.json();
     return Array.isArray(j.qs) ? j.qs : [];
   } catch {
@@ -218,7 +236,7 @@ export async function fetchFollowups(character: string, actName: string, message
 
 export async function fetchProbes(name: string, act: string): Promise<string[]> {
   try {
-    const r = await fetch(`${BASE}/probe/${encodeURIComponent(name)}?act=${encodeURIComponent(act)}`);
+    const r = await afetch(`${BASE}/probe/${encodeURIComponent(name)}?act=${encodeURIComponent(act)}`);
     const j = await r.json();
     return Array.isArray(j.questions) ? j.questions : [];
   } catch {
@@ -231,7 +249,7 @@ export async function chat(
   actName: string,
   messages: { role: "user" | "assistant"; content: string }[]
 ): Promise<ChatResult> {
-  const r = await fetch(`${BASE}/chat`, {
+  const r = await afetch(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ character, actName, messages }),
@@ -271,13 +289,13 @@ export interface Dossier {
 }
 
 export async function fetchCharacter(name: string, act: string): Promise<Dossier> {
-  const r = await fetch(`${BASE}/character/${encodeURIComponent(name)}?act=${encodeURIComponent(act)}`);
+  const r = await afetch(`${BASE}/character/${encodeURIComponent(name)}?act=${encodeURIComponent(act)}`);
   const j = await r.json();
   if (j.error) throw new Error(j.error);
   return j;
 }
 
 export async function fetchAct(ord: number): Promise<{ name: string; markdown: string }> {
-  const r = await fetch(`${BASE}/act/${ord}`);
+  const r = await afetch(`${BASE}/act/${ord}`);
   return r.json();
 }
