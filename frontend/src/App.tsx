@@ -168,7 +168,7 @@ export default function App() {
         </aside>
       </div>
 
-      <ActScrubber graph={graph} />
+      {mode === "scene" && <ActScrubber graph={graph} />}
     </div>
   );
 }

@@ -2,18 +2,10 @@ import { useMemo } from "react";
 import type { Graph } from "@liumang/shared";
 import { useUI } from "../store";
 
-/** 短幕名（底部轴用） */
-const SHORT: Record<string, string> = {
-  开本前准备: "开本前",
-  结局演绎剧场: "结局",
-  无声之旅: "无声之旅",
-  无所容心: "无所容心",
-};
-
 /**
- * 底部「幕」时间轴——统驭一切的时间控制器。
- * 滑到哪一幕，关系网/认知卡/矩阵全更新到哪一幕。
- * 每幕显示"发牌密度"：本幕新揭示的事实(蓝) + 新发的线索(绿)。
+ * 底部「幕」时间轴（仅现场·入局）——战争迷雾时间机器。
+ * 点哪一幕，认知卡/迷雾就更新到哪一幕。每幕显示"发牌密度"：本幕新揭示的事实(蓝) + 新发的线索(绿)。
+ * 幕名从图谱 meta.acts 派生（不写死单本，换本不崩）。
  */
 export default function ActScrubber({ graph }: { graph: Graph }) {
   const { act, set } = useUI();
@@ -23,7 +15,7 @@ export default function ActScrubber({ graph }: { graph: Graph }) {
     const clues = graph.nodes.filter((n) => n.kind === "clue" && n.act != null);
     const rows = graph.meta.acts.map((a) => ({
       ord: a.ord,
-      name: SHORT[a.name] ?? a.name,
+      name: a.name,
       facts: facts.filter((f) => f.act === a.ord).length,
       clues: clues.filter((c) => c.act === a.ord).length,
     }));
@@ -43,7 +35,6 @@ export default function ActScrubber({ graph }: { graph: Graph }) {
         {acts.map((a) => {
           const cur = a.ord === act;
           const total = a.facts + a.clues;
-          const h = 26 * (total / maxN);
           return (
             <button
               key={a.ord}
